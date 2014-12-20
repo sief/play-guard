@@ -30,8 +30,8 @@ object GuardFilter extends EssentialFilter {
   lazy val GlobalTokenBucketSize = conf.getInt("guard-filter.global.bucket.size").get
   lazy val GlobalTokenBucketRate = conf.getInt("guard-filter.global.bucket.rate").get
 
-  lazy val IpWhitelist = conf.getList("guard-filter.ip.whitelist")
-  lazy val IpBlacklist = conf.getList("guard-filter.ip.blacklist")
+  lazy val IpWhitelist = conf.getString("guard-filter.ip.whitelist").fold(Vector[String]())(_.split(',').toVector)
+  lazy val IpBlacklist = conf.getString("guard-filter.ip.blacklist").fold(Vector[String]())(_.split(',').toVector)
 
   private lazy val ipTbActorRef = TokenBucketGroup.create(Akka.system, IpTokenBucketSize, IpTokenBucketRate)
   private lazy val globalTbActorRef = TokenBucketGroup.create(Akka.system, GlobalTokenBucketSize, GlobalTokenBucketRate)
