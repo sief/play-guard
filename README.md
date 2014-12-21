@@ -23,7 +23,7 @@ To include it in your app, copy the play-guard_2.11-x.x.jar file to your lib fol
 
 Filter for rate limiting and IP whitelisting/blacklisting
 
-Rejects request based on the following rules:
+Rejects requests based on the following rules:
 
 ```
 if IP is in whitelist => let pass
@@ -84,7 +84,7 @@ private val rateLimiter = RateLimitAction(3, 1f / 5, { implicit r: RequestHeader
 2.2 Failure rate limit
 -------
 
-This limits access to a specific request based on the failure rate. This is useful if you want to pretent brute force bot attacks on authentication requests, for example.
+This limits access to a specific action based on the failure rate. This is useful if you want to pretent brute force bot attacks on authentication requests, for example.
 
 From the sample app:
 
