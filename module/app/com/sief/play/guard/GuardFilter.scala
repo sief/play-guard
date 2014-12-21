@@ -17,8 +17,15 @@ import play.api.mvc.Results._
 
 /**
  * Filter for rate limiting and IP whitelisting/blacklisting
+ *
+ * Rejects request based on the following rules:
+ *
+ * 1. if IP is in whitelist => let pass
+ * 2. else if IP is in blacklist => reject with ‘403 FORBIDDEN’
+ * 3. else if IP rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
+ * 4. else if global rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
  */
-object GuardFilter extends EssentialFilter {
+class GuardFilter extends EssentialFilter {
 
   lazy val conf = Play.current.configuration
 
@@ -61,7 +68,7 @@ object GuardFilter extends EssentialFilter {
 
       case NonFatal(ex) =>
         Logger.error("rate limiter failed", ex)
-        true
+        true // let pass in case of internal failure
     }
   }
 
@@ -84,4 +91,11 @@ object GuardFilter extends EssentialFilter {
     else if (remaining < bucketSize.toFloat / 2) Logger.warn(s"$prefix rate limit below 50%: $remaining")
     else Logger.debug(s"$prefix bucket level: $remaining")
   }
+}
+
+/**
+ * Factory companion
+ */
+object GuardFilter{
+  def apply(): GuardFilter = new GuardFilter()
 }
