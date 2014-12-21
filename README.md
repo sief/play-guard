@@ -23,6 +23,8 @@ To include it in your app, copy the play-guard_2.11-x.x.jar file to your lib fol
 
 Filter for rate limiting and IP whitelisting/blacklisting
 
+1.1 Rules
+----------
 Rejects requests based on the following rules:
 
 ```
@@ -76,9 +78,9 @@ From the sample app:
 // allow 3 requests immediately and get a new token every 5 seconds
 private val rateLimiter = RateLimitAction(3, 1f / 5, { implicit r: RequestHeader => BadRequest("rate exceeded")}, "test rate limit")
 
-  def limited = rateLimiter {
-    Ok("limited")
-  }
+def limited = rateLimiter {
+  Ok("limited")
+}
 ```
 
 2.2 Failure rate limit
