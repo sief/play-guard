@@ -1,4 +1,4 @@
-play2 module for IP based rate limiting
+Play2 Module for IP based Rate Limiting
 ==========
 
 Target
@@ -86,7 +86,7 @@ def limited = rateLimiter {
 2.2 Failure rate limit
 -------
 
-This limits access to a specific action based on the failure rate. This is useful if you want to pretent brute force bot attacks on authentication requests, for example.
+This limits access to a specific action based on the failure rate. This is useful if you want to prevent brute force bot attacks on authentication requests, for example.
 
 From the sample app:
 
