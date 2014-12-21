@@ -14,6 +14,7 @@ object RateLimitAction {
 
   /**
    * Creates an ActionBuilder which holds a TokenBucketGroup with a bucket for each IP address.
+   * Every request consumes a token. If no tokens remain, the request is rejected.
    * @param size token bucket size
    * @param rate token bucket rate (per second)
    * @param rejectedResponse response if request is rejected

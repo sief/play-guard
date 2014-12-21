@@ -42,6 +42,7 @@ private class TokenBucketGroup(size: Int, rate: Float, clock: Clock) extends Act
 
   private var lastRefill = clock.now
 
+  // bucket level as Long to avoid overflow
   private var buckets = Map.empty[Any, Long]
 
 
@@ -53,6 +54,7 @@ private class TokenBucketGroup(size: Int, rate: Float, clock: Clock) extends Act
 
     /**
      * First refills all buckets at the given rate, then tries to consume the required amount.
+     * If no bucket exists for the given key, a new full one is created.
      */
     case TokenRequest(key, required) =>
       refillAll()
