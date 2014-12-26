@@ -36,14 +36,13 @@ private case class TokenRequest(key: Any, count: Int)
  */
 private class TokenBucketGroup(size: Int, rate: Float, clock: Clock) extends Actor with ActorLogging {
 
-  private val intervalMillis = (1000 / rate).toLong
+  private val intervalMillis: Int = (1000 / rate).toInt
 
-  private val ratePerMilli = rate / 1000
+  private val ratePerMilli: Double = rate / 1000
 
-  private var lastRefill = clock.now
+  private var lastRefill: Long = clock.now
 
-  // bucket level as Long to avoid overflow
-  private var buckets = Map.empty[Any, Long]
+  private var buckets = Map.empty[Any, Int]
 
 
   /**
@@ -58,7 +57,7 @@ private class TokenBucketGroup(size: Int, rate: Float, clock: Clock) extends Act
      */
     case TokenRequest(key, required) =>
       refillAll()
-      val newLevel = (buckets.getOrElse(key, size.toLong) - required).toInt
+      val newLevel = buckets.getOrElse(key, size) - required
       if (newLevel >= 0) {
         buckets = buckets + (key -> newLevel)
       }
@@ -69,13 +68,25 @@ private class TokenBucketGroup(size: Int, rate: Float, clock: Clock) extends Act
    * Refills all buckets at the given rate. Full buckets are removed.
    */
   private def refillAll() {
-    val now = clock.now
-    val diff = now - lastRefill
-    val tokensToAdd = (diff * ratePerMilli).toLong
+    val now: Long = clock.now
+    val diff: Long = now - lastRefill
+    val tokensToAdd: Long = Math.round(diff * ratePerMilli)
     if (tokensToAdd > 0) {
-      buckets = buckets.mapValues(_ + tokensToAdd).filterNot(_._2 >= size)
+      buckets = buckets.mapValues(addTokens(_, tokensToAdd)).filterNot(_._2 >= size)
       lastRefill = now - diff % intervalMillis
     }
+  }
+
+  /**
+   * Helper to avoid overflow.
+   * @param currentLevel
+   * @param toAdd
+   * @return the sum or Int.MaxValue in case of overflow
+   */
+  private def addTokens(currentLevel: Int, toAdd: Long): Int = {
+    val r = currentLevel.toLong + toAdd
+    if (r > Int.MaxValue) Int.MaxValue
+    else r.toInt
   }
 }
 
@@ -85,7 +96,7 @@ object TokenBucketGroup {
    * Creates the actor and bucket group.
    * @param system actor system
    * @param size bucket size. Has to be in the range 0 to 1000.
-   * @param rate refill rate in tokens per second. Has to be in the range 0 to 1000.
+   * @param rate refill rate in tokens per second. Has to be in the range 0.000001f to 1000.
    * @param clock for mocking the current time.
    * @param context akka execution context
    * @return actorRef, needed to call consume later.
@@ -95,7 +106,7 @@ object TokenBucketGroup {
   })(implicit context: ExecutionContext): ActorRef = {
     require(size > 0)
     require(size <= 1000)
-    require(rate > 0)
+    require(rate >= 0.000001f)
     require(rate <= 1000)
     system.actorOf(Props(new TokenBucketGroup(size, rate, clock)))
   }

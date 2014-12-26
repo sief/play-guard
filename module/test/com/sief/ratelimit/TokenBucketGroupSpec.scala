@@ -19,9 +19,9 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
   }
 
   "TokenBucketGroup.create" should
-    "allow only allow positive values <= 1000 for size and rate" in {
+    "allow only values for size and rate in their range" in {
     forAll { (size: Int, rate: Float) =>
-      if ((1 to 1000 contains size) && (1 to 1000 contains rate)) {
+      if ((1 to 1000 contains size) && (rate <= 1 && rate >= 0.000001f)) {
         TokenBucketGroup.create(system, size, rate)
       } else {
         intercept[IllegalArgumentException] {
@@ -29,6 +29,10 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
         }
       }
       ()
+    }
+    TokenBucketGroup.create(system, 1, 0.000001f)
+    intercept[IllegalArgumentException] {
+      TokenBucketGroup.create(system, 1, 0.0000001f)
     }
   }
 
@@ -142,6 +146,10 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
   }
 
+
+  /**
+   * NOTE: this realtime test might fail on slow machines
+   */
   it should "regain tokens at specified rate with real clock" in {
     val ref = TokenBucketGroup.create(system, 200, 1000)
     TokenBucketGroup.consume(ref, "x", 200).futureValue should be >= 0
