@@ -8,9 +8,12 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 
 object RateLimitAction {
+
+  private val logger = Logger(this.getClass.getName.dropRight(1))
 
   /**
    * Creates an ActionBuilder which holds a TokenBucketGroup with a bucket for each IP address.
@@ -26,14 +29,19 @@ object RateLimitAction {
     private lazy val ipTbActorRef = TokenBucketGroup.create(Akka.system, size, rate)
 
     def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
+
       TokenBucketGroup.consume(ipTbActorRef, request.remoteAddress, 1).flatMap { remaining =>
         if (remaining >= 0) {
-          if (remaining < size.toFloat / 2) Logger.warn(s"$logPrefix rate limit for ${request.remoteAddress} below 50%: $remaining")
+          if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix rate limit for ${request.remoteAddress} below 50%: $remaining")
           block(request)
         } else {
-          Logger.error(s"$logPrefix rate limit for ${request.remoteAddress} exceeded")
+          logger.error(s"$logPrefix rate limit for ${request.remoteAddress} exceeded")
           Future.successful(rejectedResponse(request))
         }
+      } recoverWith {
+        case NonFatal(ex) =>
+          logger.error(s"$logPrefix rate limiter failed", ex)
+          block(request) // let pass in case of internal failure
       }
     }
   }
@@ -56,16 +64,20 @@ object RateLimitAction {
 
       TokenBucketGroup.consume(ipTbActorRef, request.remoteAddress, 0).flatMap { remaining =>
         if (remaining > 0) {
-          if (remaining < size.toFloat / 2) Logger.warn(s"$logPrefix fail rate limit for ${request.remoteAddress} below 50%: $remaining")
+          if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${request.remoteAddress} below 50%: $remaining")
           val res = block(request)
           res.map { r =>
             if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, request.remoteAddress, 1)
           }
           res
         } else {
-          Logger.error(s"$logPrefix too many failed attempts from ${request.remoteAddress}")
+          logger.error(s"$logPrefix too many failed attempts from ${request.remoteAddress}")
           Future.successful(rejectedResponse(request))
         }
+      } recoverWith {
+        case NonFatal(ex) =>
+          logger.error(s"$logPrefix fail rate limiter failed", ex)
+          block(request) // let pass in case of internal failure
       }
     }
   }

@@ -7,7 +7,7 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 scalaVersion := "2.11.4"
 
 libraryDependencies ++= Seq(
-  "com.sief" %% "play-guard" % "1.3-SNAPSHOT"
+  "com.sief" %% "play-guard" % "1.3.0"
 )
 
 resolvers ++= Seq("Local" at "file:///Users/simoneffing/.ivy2/local")

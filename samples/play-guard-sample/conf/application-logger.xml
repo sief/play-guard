@@ -1,0 +1,21 @@
+<configuration>
+
+    <conversionRule conversionWord="coloredLevel" converterClass="play.api.Logger$ColoredLevel" />
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%coloredLevel %logger - %thread  - %message %xException%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="play" level="INFO" />
+    <logger name="application" level="DEBUG" />
+    
+    <logger name="com.sief.play.guard.GuardFilter" level="DEBUG" />
+    <logger name="com.sief.play.guard.RateLimitAction" level="DEBUG" />
+
+    <root level="ERROR">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+</configuration>

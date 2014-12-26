@@ -43,12 +43,16 @@ class GuardFilter extends EssentialFilter {
   private lazy val ipTbActorRef = TokenBucketGroup.create(Akka.system, IpTokenBucketSize, IpTokenBucketRate)
   private lazy val globalTbActorRef = TokenBucketGroup.create(Akka.system, GlobalTokenBucketSize, GlobalTokenBucketRate)
 
+  private val logger = Logger(this.getClass)
+
   def apply(next: EssentialAction) = EssentialAction { request =>
     if (!Enabled) next(request)
     else if (IpWhitelist.contains(request.remoteAddress)) next(request)
     else if (IpBlacklist.contains(request.remoteAddress)) Done(Forbidden)
     else {
+      val ts = System.currentTimeMillis()
       Iteratee.flatten(checkRateLimits(request.remoteAddress).map { res =>
+        logger.debug(s"rate limit check took ${System.currentTimeMillis() - ts} ms")
         if (res) next(request)
         else Done(TooManyRequest(Messages("error.overload")(request.acceptLanguages.headOption.getOrElse(Lang.defaultLang))))
       })
@@ -67,7 +71,7 @@ class GuardFilter extends EssentialFilter {
         false
 
       case NonFatal(ex) =>
-        Logger.error("rate limiter failed", ex)
+        logger.error("rate limiter failed", ex)
         true // let pass in case of internal failure
     }
   }
@@ -87,9 +91,9 @@ class GuardFilter extends EssentialFilter {
   }
 
   private def logBucketLevel(prefix: String, remaining: Int, bucketSize: Int): Unit = {
-    if (remaining < 0) Logger.error(s"$prefix rate limit exceeded")
-    else if (remaining < bucketSize.toFloat / 2) Logger.warn(s"$prefix rate limit below 50%: $remaining")
-    else Logger.debug(s"$prefix bucket level: $remaining")
+    if (remaining < 0) logger.error(s"$prefix rate limit exceeded")
+    else if (remaining < bucketSize.toFloat / 2) logger.warn(s"$prefix rate limit below 50%: $remaining")
+    else logger.debug(s"$prefix bucket level: $remaining")
   }
 }
 
