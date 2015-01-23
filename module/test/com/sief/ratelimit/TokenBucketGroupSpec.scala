@@ -84,7 +84,7 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
     fakeClock.ts += 50
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
 
-    fakeClock.ts += 50
+    fakeClock.ts += 51
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
 
@@ -104,17 +104,26 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
     val ref = TokenBucketGroup.create(system, 10, 0.1f, fakeClock)
     TokenBucketGroup.consume(ref, "x", 10).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
+    TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 0
 
-    fakeClock.ts += 10000
+    fakeClock.ts += 9999
+    TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 0
+    TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
+    TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 0
+
+    fakeClock.ts += 2
+    TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 1
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
 
     fakeClock.ts += 30000
+    TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 3
     TokenBucketGroup.consume(ref, "x", 2).futureValue shouldBe 1
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
 
     fakeClock.ts += 70000
+    TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 7
     TokenBucketGroup.consume(ref, "x", 3).futureValue shouldBe 4
     TokenBucketGroup.consume(ref, "x", 4).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
@@ -140,8 +149,9 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
     val ref = TokenBucketGroup.create(system, 100, 10, fakeClock)
     TokenBucketGroup.consume(ref, "x", 100).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 100).futureValue shouldBe -100
+    TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 0
 
-    fakeClock.ts += 100
+    fakeClock.ts += 101
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
   }

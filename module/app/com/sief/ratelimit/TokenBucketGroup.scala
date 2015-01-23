@@ -70,7 +70,7 @@ private class TokenBucketGroup(size: Int, rate: Float, clock: Clock) extends Act
   private def refillAll() {
     val now: Long = clock.now
     val diff: Long = now - lastRefill
-    val tokensToAdd: Long = Math.round(diff * ratePerMilli)
+    val tokensToAdd: Long = (diff * ratePerMilli).toLong
     if (tokensToAdd > 0) {
       buckets = buckets.mapValues(addTokens(_, tokensToAdd)).filterNot(_._2 >= size)
       lastRefill = now - diff % intervalMillis
