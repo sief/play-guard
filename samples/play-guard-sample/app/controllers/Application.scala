@@ -1,10 +1,10 @@
 package controllers
 
-import com.sief.play.guard.RateLimitAction
+import com.sief.play.guard.RateLimitAction._
 import play.api.mvc._
 
 /**
- * Test dummy app for RateLimitAction
+ * Test dummy app for rate limit actions
  */
 object Application extends Controller {
 
@@ -14,16 +14,25 @@ object Application extends Controller {
 
 
   // allow 3 requests immediately and get a new token every 5 seconds
-  private val rateLimiter = RateLimitAction(3, 1f / 5, { implicit r: RequestHeader => BadRequest("rate exceeded")}, "test rate limit")
+  private val ipRateLimited = IpRateLimitAction(RateLimiter(3, 1f / 5, "test limit by IP")) { implicit r: RequestHeader => BadRequest( s"""rate limit for ${r.remoteAddress} exceeded""")}
 
-  def limited = rateLimiter {
-    Ok("limited")
+  def limitedByIp = ipRateLimited {
+    Ok("limited by IP")
   }
 
-  // allow 3 failures immediately and get a new token every 10 seconds
-  private val failRateLimiter = RateLimitAction.failLimit(3, 1f / 10, { implicit r: RequestHeader => BadRequest("fail rate exceeded")}, "test fail rate limit")
 
-  def fail(fail: Boolean) = failRateLimiter {
+  // allow 4 requests immediately and get a new token every 15 seconds
+  private val tokenRateLimited = KeyRateLimitAction(RateLimiter(4, 1f / 15, "test by token")) _
+
+  def limitedByKey(key: String) = tokenRateLimited(_ => BadRequest(s"""rate limit for '$key' exceeded"""))(key){
+    Ok("limited by token")
+  }
+
+
+  // allow 2 failures immediately and get a new token every 10 seconds
+  private val failRateLimited = FailureRateLimitAction(2, 1f / 10, { implicit r: RequestHeader => BadRequest("failure rate exceeded")}, "test failure rate limit")
+
+  def failureLimitedByIp(fail: Boolean) = failRateLimited {
     if (fail) BadRequest("failed")
     else Ok("Ok")
   }

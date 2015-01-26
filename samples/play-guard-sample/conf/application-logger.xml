@@ -11,8 +11,7 @@
     <logger name="play" level="INFO" />
     <logger name="application" level="DEBUG" />
     
-    <logger name="com.sief.play.guard.GuardFilter" level="DEBUG" />
-    <logger name="com.sief.play.guard.RateLimitAction" level="DEBUG" />
+    <logger name="com.sief.play.guard" level="DEBUG" />
 
     <root level="ERROR">
         <appender-ref ref="STDOUT" />

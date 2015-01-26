@@ -2,11 +2,11 @@ name := """play-guard"""
 
 organization := """com.sief"""
 
-version := "1.3.1"
+version := "1.4.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.5"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.2.1" % "test",

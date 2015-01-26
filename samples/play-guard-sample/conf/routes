@@ -4,8 +4,9 @@
 
 # Home page
 GET     /                           controllers.Application.index
-GET     /fail                       controllers.Application.fail(fail: Boolean)
-GET     /limited                    controllers.Application.limited
+GET     /limited                    controllers.Application.limitedByIp
+GET     /limited/:key               controllers.Application.limitedByKey(key)
+GET     /fail                       controllers.Application.failureLimitedByIp(fail: Boolean)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
