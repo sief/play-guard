@@ -14,7 +14,7 @@ Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 Installation
 ----------
 
-Not available from central repos yet. Just clone the project and run "activator publish-local" in "module". 
+Not available from central repos yet. Just clone the project, checkout v1.3.1 and run "activator publish-local" in "module". 
 This will allow the sample app to fetch it from your local repo. 
 To include it in your app, copy the play-guard_2.11-x.x.jar file to your lib folder.
 
