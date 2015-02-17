@@ -2,7 +2,7 @@ name := """play-guard"""
 
 organization := """com.sief"""
 
-version := "1.4.0-SNAPSHOT"
+version := "1.4.0"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 

@@ -14,7 +14,7 @@ Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 Installation
 ----------
 
-Not available from central repos yet. Just clone the project, checkout v1.3.1 and run "activator publish-local" in "module". 
+Not available from central repos yet. Just clone the project, checkout v1.4.0 and run "activator publish-local" in "module".
 This will allow the sample app to fetch it from your local repo. 
 To include it in your app, copy the play-guard_2.11-x.x.jar file to your lib folder.
 
@@ -43,7 +43,10 @@ object Global extends WithFilters(GuardFilter()) {
 }
 ```
 
-Don't forget the configuration, otherwise your app won't start, in your application.conf e.g.:
+Requires configuration in your application.conf.
+
+E.g.:
+
 ```
 guard-filter {
   enabled = true
@@ -67,7 +70,7 @@ guard-filter {
 2. RateLimitAction
 ==========
 
-Action wrapper for rate limiting specific actions. Comes in two flavours:
+Action wrapper for rate limiting specific actions. Comes in three flavours:
 
 2.1 Simple rate limit
 -------
@@ -75,28 +78,48 @@ Action wrapper for rate limiting specific actions. Comes in two flavours:
 From the sample app:
 
 ```scala
-// allow 3 requests immediately and get a new token every 5 seconds
-private val rateLimiter = RateLimitAction(3, 1f / 5, { implicit r: RequestHeader => BadRequest("rate exceeded")}, "test rate limit")
+  // allow 3 requests immediately and get a new token every 5 seconds
+  private val ipRateLimited = IpRateLimitAction(RateLimiter(3, 1f / 5, "test limit by IP")) {
+    implicit r: RequestHeader => BadRequest( s"""rate limit for ${r.remoteAddress} exceeded""")
+  }
 
-def limited = rateLimiter {
-  Ok("limited")
-}
+  def limitedByIp = ipRateLimited {
+    Ok("limited by IP")
+  }
 ```
 
-2.2 Failure rate limit
+2.2 Simple rate limit based on key parameter
 -------
 
-This limits access to a specific action based on the failure rate. This is useful if you want to prevent brute force bot attacks on authentication requests, for example.
+From the sample app:
+
+
+```scala
+  // allow 4 requests immediately and get a new token every 15 seconds
+  private val tokenRateLimited = KeyRateLimitAction(RateLimiter(4, 1f / 15, "test by token")) _
+
+  def limitedByKey(key: String) = tokenRateLimited(_ => BadRequest( s"""rate limit for '$key' exceeded"""))(key) {
+    Ok("limited by token")
+  }
+
+```
+
+2.3 Failure rate limit
+-------
+
+This limits access to a specific action based on the failure rate. This is useful if you want to prevent brute force bot attacks on authentication requests.
 
 From the sample app:
 
 ```scala
-// allow 3 failures immediately and get a new token every 10 seconds
-private val failRateLimiter = RateLimitAction.failLimit(3, 1f / 10, { implicit r: RequestHeader => BadRequest("fail rate exceeded")}, "test fail rate limit")
+  // allow 2 failures immediately and get a new token every 10 seconds
+  private val failRateLimited = FailureRateLimitAction(2, 1f / 10, {
+    implicit r: RequestHeader => BadRequest("failure rate exceeded")
+  }, "test failure rate limit")
 
-def fail(fail: Boolean) = failRateLimiter {
-  if (fail) BadRequest("failed")
-  else Ok("Ok")
-}
+  def failureLimitedByIp(fail: Boolean) = failRateLimited {
+    if (fail) BadRequest("failed")
+    else Ok("Ok")
+  }
 ```
 
