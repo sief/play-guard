@@ -11,12 +11,16 @@ Rate Limit Algorithm
 Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 
 
-Installation
+Getting play-guard
 ----------
 
-Not available from central repos yet. Just clone the project, checkout v1.4.0 and run "activator publish-local" in "module".
-This will allow the sample app to fetch it from your local repo. 
-To include it in your app, copy the play-guard_2.11-x.x.jar file to your lib folder.
+The current stable version is 1.4.1, which is cross-built against Scala 2.10.x and 2.11.x.
+
+Add the following dependency to your build file:
+
+```scala
+  "com.digitaltangible" %% "play-guard" % "1.4.1"
+```
 
 1. GuardFilter
 ==========
