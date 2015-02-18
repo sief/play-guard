@@ -14,7 +14,7 @@ object Application extends Controller {
 
 
   // allow 3 requests immediately and get a new token every 5 seconds
-  private val ipRateLimited = IpRateLimitAction(RateLimiter(3, 1f / 5, "test limit by IP")) {
+  private val ipRateLimited = IpRateLimitAction(RateLimiter(3, 1f / 5, "test limit by IP address")) {
     implicit r: RequestHeader => BadRequest( s"""rate limit for ${r.remoteAddress} exceeded""")
   }
 

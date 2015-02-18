@@ -1,4 +1,4 @@
-Play2 Module for IP based Rate Limiting
+Play2 Module for Rate Limiting
 ==========
 
 Target
@@ -25,16 +25,16 @@ Add the following dependency to your build file:
 1. GuardFilter
 ==========
 
-Filter for rate limiting and IP whitelisting/blacklisting
+Filter for rate limiting and IP address whitelisting/blacklisting
 
 1.1 Rules
 ----------
 Rejects requests based on the following rules:
 
 ```
-if IP is in whitelist => let pass
-else if IP is in blacklist => reject with ‘403 FORBIDDEN’
-else if IP rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
+if IP address is in whitelist => let pass
+else if IP address is in blacklist => reject with ‘403 FORBIDDEN’
+else if IP address rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
 else if global rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
 ```
 
@@ -83,7 +83,7 @@ From the sample app:
 
 ```scala
   // allow 3 requests immediately and get a new token every 5 seconds
-  private val ipRateLimited = IpRateLimitAction(RateLimiter(3, 1f / 5, "test limit by IP")) {
+  private val ipRateLimited = IpRateLimitAction(RateLimiter(3, 1f / 5, "test limit by IP address")) {
     implicit r: RequestHeader => BadRequest( s"""rate limit for ${r.remoteAddress} exceeded""")
   }
 
