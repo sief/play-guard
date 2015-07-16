@@ -2,12 +2,12 @@ package com.sief.ratelimit
 
 import java.util.concurrent.TimeUnit
 
-import scala.concurrent.{ExecutionContext, Future}
-
 import akka.actor._
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import akka.util.Timeout
+
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Token Bucket implementation as described here http://en.wikipedia.org/wiki/Token_bucket

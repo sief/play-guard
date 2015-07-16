@@ -1,14 +1,14 @@
 package com.sief.play.guard
 
-import scala.concurrent.Future
-import scala.util.control.NonFatal
-
 import com.sief.ratelimit.TokenBucketGroup
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
+
+import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 object RateLimitAction {
 

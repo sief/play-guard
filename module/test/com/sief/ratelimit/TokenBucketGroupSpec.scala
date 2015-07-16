@@ -3,9 +3,9 @@ package com.sief.ratelimit
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import org.scalacheck.Gen
-import org.scalatest.{FlatSpecLike, Matchers}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import org.scalatest.{FlatSpecLike, Matchers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

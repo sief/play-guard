@@ -2,18 +2,18 @@ name := """play-guard"""
 
 organization := """com.digitaltangible"""
 
-version := "1.4.1"
+version := "1.5.0"
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.7"
 
-crossScalaVersions := Seq("2.10.4", "2.11.5")
+crossScalaVersions := Seq("2.10.5", "2.11.7")
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.2.1" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.11.6" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % "2.3.4" % "test"
+  "org.scalatest" %% "scalatest" % "2.2.5" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.12.4" % "test",
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.12" % "test"
 )
 
 

@@ -2,18 +2,19 @@ package com.sief.play.guard
 
 import java.util.NoSuchElementException
 
-import scala.concurrent._
-import scala.util.control.NonFatal
-
 import com.sief.ratelimit.TokenBucketGroup
-import play.api.{Logger, Play}
-import play.api.Play._
+import play.api.Play.current
 import play.api.i18n.{Lang, Messages}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.{Done, Iteratee}
-import play.api.mvc._
 import play.api.mvc.Results._
+import play.api.mvc._
+import play.api.{Logger, Play}
+
+import scala.concurrent._
+import scala.util.control.NonFatal
+import play.api.i18n.Messages.Implicits._
 
 /**
  * Filter for rate limiting and IP whitelisting/blacklisting
@@ -54,7 +55,8 @@ class GuardFilter extends EssentialFilter {
       Iteratee.flatten(checkRateLimits(request.remoteAddress).map { res =>
         logger.debug(s"rate limit check took ${System.currentTimeMillis() - ts} ms")
         if (res) next(request)
-        else Done(TooManyRequest(Messages("error.overload")(request.acceptLanguages.headOption.getOrElse(Lang.defaultLang))))
+        else Done(TooManyRequest(Messages("error.overload")(
+          implicitly[Messages].copy(lang = request.acceptLanguages.headOption.getOrElse(Lang.defaultLang)))))
       })
     }
   }
