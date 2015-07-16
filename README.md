@@ -4,7 +4,7 @@ Play2 Module for Rate Limiting
 Target
 ----------
 
-This module targets the __Scala__ version of __Play2.4.x__
+This module targets the __Scala__ version of __Play 2.4.x__
 
 Rate Limit Algorithm
 ----------
