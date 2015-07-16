@@ -14,7 +14,7 @@ Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 Getting play-guard
 ----------
 
-The current stable version is 1.4.1, which is cross-built against Scala 2.10.x and 2.11.x.
+The current stable version is 1.5.0, which is cross-built against Scala 2.10.x and 2.11.x.
 
 Add the following dependency to your build file:
 
