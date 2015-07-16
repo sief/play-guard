@@ -4,7 +4,7 @@ Play2 Module for Rate Limiting
 Target
 ----------
 
-This module targets the __Scala__ version of __Play2.3.x__
+This module targets the __Scala__ version of __Play2.4.x__
 
 Rate Limit Algorithm
 ----------
@@ -19,7 +19,7 @@ The current stable version is 1.4.1, which is cross-built against Scala 2.10.x a
 Add the following dependency to your build file:
 
 ```scala
-  "com.digitaltangible" %% "play-guard" % "1.4.1"
+  "com.digitaltangible" %% "play-guard" % "1.5.0"
 ```
 
 1. GuardFilter
