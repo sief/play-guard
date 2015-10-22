@@ -40,4 +40,12 @@ object Application extends Controller {
     if (fail) BadRequest("failed")
     else Ok("Ok")
   }
+
+  // combine tokenRateLimited and failRateLimited
+  def limitByKeyAndFailureLimitedByIp(key: String, fail: Boolean) =
+    (tokenRateLimited(_ => BadRequest( s"""rate limit for '$key' exceeded"""))(key) andThen failRateLimited){
+
+    if (fail) BadRequest("failed")
+    else Ok("Ok")
+  }
 }
