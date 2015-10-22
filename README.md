@@ -1,5 +1,12 @@
-Play2 Module for Rate Limiting
+Play2 Guard Module
 ==========
+
+Play2 module for blocking & throttling abusive requests.
+
+- IP address whitelisting/blacklisting
+- general request throttling
+- throttling specific Actions based on IP address or request parameter
+- throttling specific Actions based on IP address and failure rate (e.g. wrong credentials) 
 
 Target
 ----------
