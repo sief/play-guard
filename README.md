@@ -21,12 +21,12 @@ Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 Getting play-guard
 ----------
 
-The current stable version is 1.5.0, which is cross-built against Scala 2.10.x and 2.11.x.
+The current stable version is 1.6.0, which is cross-built against Scala 2.10.x and 2.11.x.
 
 Add the following dependency to your build file:
 
 ```scala
-  "com.digitaltangible" %% "play-guard" % "1.5.0"
+  "com.digitaltangible" %% "play-guard" % "1.6.0"
 ```
 
 1. GuardFilter
@@ -56,23 +56,31 @@ object Global extends WithFilters(GuardFilter()) {
 
 Requires configuration in your application.conf.
 
-E.g.:
+__Note: the config format has changed with v1.6.0__
+
 
 ```
-guard-filter {
-  enabled = true
-  global{
-    bucket {
-      size = 100
-      rate = 100
+play.guard {
+
+  # the http header to use for the client IP address.
+  # If not set, RequestHeader.remoteAddress will be used
+  clientipheader = "X-Forwarded-For"
+
+  filter {
+    enabled = true
+    global {
+      bucket {
+        size = 100
+        rate = 100
+      }
     }
-  }
-  ip {
-    whitelist = "1.1.1.1,2.2.2.2"
-    blacklist = "3.3.3.3,4.4.4.4"
-    bucket {
-      size = 5
-      rate = 10
+    ip {
+      whitelist = "1.1.1.1,2.2.2.2"
+      blacklist = "3.3.3.3,4.4.4.4"
+      bucket {
+        size = 5
+        rate = 10
+      }
     }
   }
 }

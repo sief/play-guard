@@ -28,18 +28,18 @@ import play.api.i18n.Messages.Implicits._
  */
 class GuardFilter extends EssentialFilter {
 
-  lazy val conf = Play.current.configuration
+  private lazy val conf = Play.current.configuration
 
-  lazy val Enabled = conf.getBoolean("guard-filter.enabled").get
+  private lazy val Enabled = conf.getBoolean("play.guard.filter.enabled").get
 
-  lazy val IpTokenBucketSize = conf.getInt("guard-filter.ip.bucket.size").get
-  lazy val IpTokenBucketRate = conf.getInt("guard-filter.ip.bucket.rate").get
+  private lazy val IpTokenBucketSize = conf.getInt("play.guard.filter.ip.bucket.size").get
+  private lazy val IpTokenBucketRate = conf.getInt("play.guard.filter.ip.bucket.rate").get
 
-  lazy val GlobalTokenBucketSize = conf.getInt("guard-filter.global.bucket.size").get
-  lazy val GlobalTokenBucketRate = conf.getInt("guard-filter.global.bucket.rate").get
+  private lazy val GlobalTokenBucketSize = conf.getInt("play.guard.filter.global.bucket.size").get
+  private lazy val GlobalTokenBucketRate = conf.getInt("play.guard.filter.global.bucket.rate").get
 
-  lazy val IpWhitelist = conf.getString("guard-filter.ip.whitelist").fold(Vector[String]())(_.split(',').toVector)
-  lazy val IpBlacklist = conf.getString("guard-filter.ip.blacklist").fold(Vector[String]())(_.split(',').toVector)
+  private lazy val IpWhitelist = conf.getString("play.guard.filter.ip.whitelist").fold(Vector[String]())(_.split(',').toVector)
+  private lazy val IpBlacklist = conf.getString("play.guard.filter.ip.blacklist").fold(Vector[String]())(_.split(',').toVector)
 
   private lazy val ipTbActorRef = TokenBucketGroup.create(Akka.system, IpTokenBucketSize, IpTokenBucketRate)
   private lazy val globalTbActorRef = TokenBucketGroup.create(Akka.system, GlobalTokenBucketSize, GlobalTokenBucketRate)
@@ -48,11 +48,11 @@ class GuardFilter extends EssentialFilter {
 
   def apply(next: EssentialAction) = EssentialAction { request =>
     if (!Enabled) next(request)
-    else if (IpWhitelist.contains(request.remoteAddress)) next(request)
-    else if (IpBlacklist.contains(request.remoteAddress)) Done(Forbidden)
+    else if (IpWhitelist.contains(clientIp(request))) next(request)
+    else if (IpBlacklist.contains(clientIp(request))) Done(Forbidden)
     else {
       val ts = System.currentTimeMillis()
-      Iteratee.flatten(checkRateLimits(request.remoteAddress).map { res =>
+      Iteratee.flatten(checkRateLimits(clientIp(request)).map { res =>
         logger.debug(s"rate limit check took ${System.currentTimeMillis() - ts} ms")
         if (res) next(request)
         else Done(TooManyRequest(Messages("error.overload")(

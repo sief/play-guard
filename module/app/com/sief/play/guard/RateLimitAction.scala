@@ -25,7 +25,7 @@ object RateLimitAction {
      */
     def apply(rl: RateLimiter)(rejectResponse: RequestHeader => Result) = new ActionFilter[Request] with ActionBuilder[Request] {
       def filter[A](request: Request[A]) = {
-        rl.check(request.remoteAddress).map { res =>
+        rl.check(clientIp(request)).map { res =>
           if (res) None
           else Some(rejectResponse(request))
         }
@@ -72,18 +72,18 @@ object RateLimitAction {
 
       def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
 
-        TokenBucketGroup.consume(ipTbActorRef, request.remoteAddress, 0).flatMap {
+        TokenBucketGroup.consume(ipTbActorRef, clientIp(request), 0).flatMap {
           remaining =>
             if (remaining > 0) {
-              if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${request.remoteAddress} below 50%: $remaining")
+              if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${clientIp(request)} below 50%: $remaining")
               val res = block(request)
               res.map {
                 r =>
-                  if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, request.remoteAddress, 1)
+                  if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, clientIp(request), 1)
               }
               res
             } else {
-              logger.error(s"$logPrefix too many failed attempts from ${request.remoteAddress}")
+              logger.error(s"$logPrefix too many failed attempts from ${clientIp(request)}")
               Future.successful(rejectResponse(request))
             }
         } recoverWith {
