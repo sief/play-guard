@@ -2,18 +2,18 @@ name := """play-guard"""
 
 organization := """com.digitaltangible"""
 
-version := "1.6.0"
+version := "1.7.0-SNAPSHOT"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 
-crossScalaVersions := Seq("2.10.5", "2.11.7")
+crossScalaVersions := Seq("2.10.6", "2.11.8")
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.2.5" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.12.4" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % "2.3.12" % "test"
+  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.12.5" % "test",
+  "com.typesafe.akka" %% "akka-testkit" % "2.4.4" % "test"
 )
 
 
@@ -26,7 +26,7 @@ publishTo := {
   if (version.value endsWith "SNAPSHOT")
     Some("snapshots" at nexus + "content/repositories/snapshots")
   else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+    Some("releases" at nexus + "service/local/staging/deploy/maven2")
 }
 
 pomExtra := <url>https://github.com/sief/play-guard</url>

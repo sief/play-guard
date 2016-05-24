@@ -2,33 +2,37 @@ package com.sief.play.guard
 
 import java.util.NoSuchElementException
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import com.sief.ratelimit.TokenBucketGroup
-import play.api.Play.current
-import play.api.i18n.{Lang, Messages}
-import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.{Done, Iteratee}
+import play.api.libs.streams.Accumulator
+import play.api.libs.streams.Accumulator._
 import play.api.mvc.Results._
 import play.api.mvc._
-import play.api.{Logger, Play}
+import play.api.{Configuration, Logger}
 
 import scala.concurrent._
 import scala.util.control.NonFatal
-import play.api.i18n.Messages.Implicits._
 
 /**
- * Filter for rate limiting and IP whitelisting/blacklisting
- *
- * Rejects request based on the following rules:
- *
- * 1. if IP is in whitelist => let pass
- * 2. else if IP is in blacklist => reject with ‘403 FORBIDDEN’
- * 3. else if IP rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
- * 4. else if global rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
- */
-class GuardFilter extends EssentialFilter {
+  * Filter for rate limiting and IP whitelisting/blacklisting
+  *
+  * Rejects request based on the following rules:
+  *
+  * 1. if IP is in whitelist => let pass
+  * 2. else if IP is in blacklist => reject with ‘403 FORBIDDEN’
+  * 3. else if IP rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
+  * 4. else if global rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
+  *
+  * @param conf
+  * @param system
+  */
+class GuardFilter(conf: Configuration, system: ActorSystem) extends EssentialFilter {
 
-  private lazy val conf = Play.current.configuration
+  private val logger = Logger(this.getClass)
+
+  private implicit val implicitConf = conf
 
   private lazy val Enabled = conf.getBoolean("play.guard.filter.enabled").get
 
@@ -41,22 +45,21 @@ class GuardFilter extends EssentialFilter {
   private lazy val IpWhitelist = conf.getString("play.guard.filter.ip.whitelist").fold(Vector[String]())(_.split(',').toVector)
   private lazy val IpBlacklist = conf.getString("play.guard.filter.ip.blacklist").fold(Vector[String]())(_.split(',').toVector)
 
-  private lazy val ipTbActorRef = TokenBucketGroup.create(Akka.system, IpTokenBucketSize, IpTokenBucketRate)
-  private lazy val globalTbActorRef = TokenBucketGroup.create(Akka.system, GlobalTokenBucketSize, GlobalTokenBucketRate)
+  private lazy val ipTbActorRef = TokenBucketGroup.create(system, IpTokenBucketSize, IpTokenBucketRate)
+  private lazy val globalTbActorRef = TokenBucketGroup.create(system, GlobalTokenBucketSize, GlobalTokenBucketRate)
 
-  private val logger = Logger(this.getClass)
+  private implicit val materializer = ActorMaterializer()(system)
 
-  def apply(next: EssentialAction) = EssentialAction { request =>
+  def apply(next: EssentialAction) = EssentialAction { implicit request: RequestHeader =>
     if (!Enabled) next(request)
     else if (IpWhitelist.contains(clientIp(request))) next(request)
-    else if (IpBlacklist.contains(clientIp(request))) Done(Forbidden)
+    else if (IpBlacklist.contains(clientIp(request))) done(Forbidden("IP address blocked"))
     else {
       val ts = System.currentTimeMillis()
-      Iteratee.flatten(checkRateLimits(clientIp(request)).map { res =>
+      Accumulator.flatten(checkRateLimits(clientIp(request)).map { res =>
         logger.debug(s"rate limit check took ${System.currentTimeMillis() - ts} ms")
         if (res) next(request)
-        else Done(TooManyRequest(Messages("error.overload")(
-          implicitly[Messages].copy(lang = request.acceptLanguages.headOption.getOrElse(Lang.defaultLang)))))
+        else done(TooManyRequests("too many requests"))
       })
     }
   }
@@ -97,11 +100,4 @@ class GuardFilter extends EssentialFilter {
     else if (remaining < bucketSize.toFloat / 2) logger.warn(s"$prefix rate limit below 50%: $remaining")
     else logger.debug(s"$prefix bucket level: $remaining")
   }
-}
-
-/**
- * Factory companion
- */
-object GuardFilter{
-  def apply(): GuardFilter = new GuardFilter()
 }
