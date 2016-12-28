@@ -1,4 +1,4 @@
-import com.sief.play.guard.{ActionRateLimiter, GuardFilter}
+import com.digitaltangible.playguard.{ActionRateLimiter, GuardFilter}
 import controllers.{Assets, SampleController}
 import play.api.ApplicationLoader.Context
 import play.api._

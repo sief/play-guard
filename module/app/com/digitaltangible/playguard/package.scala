@@ -1,9 +1,9 @@
-package com.sief.play
+package com.digitaltangible
 
 import play.api.Configuration
 import play.api.mvc.RequestHeader
 
-package object guard {
+package object playguard {
 
   def clientIp(request: RequestHeader)(implicit conf: Configuration): String = {
     (for {

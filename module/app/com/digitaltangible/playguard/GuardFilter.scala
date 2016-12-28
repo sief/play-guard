@@ -1,10 +1,10 @@
-package com.sief.play.guard
+package com.digitaltangible.playguard
 
 import java.util.NoSuchElementException
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import com.sief.ratelimit.TokenBucketGroup
+import com.digitaltangible.ratelimit.TokenBucketGroup
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.streams.Accumulator
 import play.api.libs.streams.Accumulator._

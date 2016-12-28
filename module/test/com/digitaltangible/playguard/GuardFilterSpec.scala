@@ -1,4 +1,4 @@
-package com.sief.play.guard
+package com.digitaltangible.playguard
 
 import java.io.File
 

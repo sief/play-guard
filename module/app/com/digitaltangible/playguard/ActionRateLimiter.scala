@@ -1,7 +1,7 @@
-package com.sief.play.guard
+package com.digitaltangible.playguard
 
 import akka.actor.ActorSystem
-import com.sief.ratelimit.TokenBucketGroup
+import com.digitaltangible.ratelimit.TokenBucketGroup
 import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._

@@ -1,6 +1,6 @@
 package controllers
 
-import com.sief.play.guard.ActionRateLimiter
+import com.digitaltangible.playguard.ActionRateLimiter
 import play.api.mvc._
 
 /**

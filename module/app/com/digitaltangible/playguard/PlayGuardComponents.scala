@@ -1,4 +1,4 @@
-package com.sief.play.guard
+package com.digitaltangible.playguard
 
 import akka.actor.ActorSystem
 import play.api.Configuration

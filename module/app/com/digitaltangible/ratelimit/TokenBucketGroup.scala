@@ -1,4 +1,4 @@
-package com.sief.ratelimit
+package com.digitaltangible.ratelimit
 
 import java.util.concurrent.TimeUnit
 
