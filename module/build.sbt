@@ -10,8 +10,8 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.12.5" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % "2.4.4" % "test"
+  "org.scalacheck" %% "scalacheck" % "1.12.6" % "test",
+  "com.typesafe.akka" %% "akka-testkit" % "2.4.16" % "test"
 )
 
 
