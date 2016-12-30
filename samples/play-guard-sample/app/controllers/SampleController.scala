@@ -14,7 +14,7 @@ class SampleController(rlActionBuilder: ActionRateLimiter) extends Controller {
 
   // allow 3 requests immediately and get a new token every 5 seconds
   private val ipRateLimitedAction = rlActionBuilder.ipRateLimiterAction(rlActionBuilder.RateLimiter(3, 1f / 5, "test limit by IP address")) {
-    implicit r: RequestHeader => BadRequest( s"""rate limit for ${r.remoteAddress} exceeded""")
+    implicit r: RequestHeader => TooManyRequests( s"""rate limit for ${r.remoteAddress} exceeded""")
   }
 
   def limitedByIp: Action[AnyContent] = ipRateLimitedAction {
@@ -25,7 +25,7 @@ class SampleController(rlActionBuilder: ActionRateLimiter) extends Controller {
   // allow 4 requests immediately and get a new token every 15 seconds
   private val tokenRateLimitedAction = rlActionBuilder.keyRateLimiterAction(rlActionBuilder.RateLimiter(4, 1f / 15, "test by token")) _
 
-  def limitedByKey(key: String): Action[AnyContent] = tokenRateLimitedAction(_ => BadRequest( s"""rate limit for '$key' exceeded"""))(key) {
+  def limitedByKey(key: String): Action[AnyContent] = tokenRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""))(key) {
     Ok("limited by token")
   }
 
@@ -42,7 +42,7 @@ class SampleController(rlActionBuilder: ActionRateLimiter) extends Controller {
 
   // combine tokenRateLimited and failRateLimited
   def limitByKeyAndFailureLimitedByIp(key: String, fail: Boolean): Action[AnyContent] =
-    (tokenRateLimitedAction(_ => BadRequest( s"""rate limit for '$key' exceeded"""))(key) andThen failRateLimited) {
+    (tokenRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""))(key) andThen failRateLimited) {
 
       if (fail) BadRequest("failed")
       else Ok("Ok")
