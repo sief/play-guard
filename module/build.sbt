@@ -8,6 +8,11 @@ scalaVersion := "2.11.8"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
+scalacOptions ++= Seq(
+  "-feature",
+  "-language:higherKinds"
+)
+
 libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
   "org.scalacheck" %% "scalacheck" % "1.12.6" % "test",

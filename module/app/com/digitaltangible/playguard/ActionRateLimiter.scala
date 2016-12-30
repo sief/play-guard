@@ -2,9 +2,9 @@ package com.digitaltangible.playguard
 
 import akka.actor.ActorSystem
 import com.digitaltangible.ratelimit.TokenBucketGroup
-import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
+import play.api.{Configuration, Logger}
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -16,20 +16,14 @@ class ActionRateLimiter(conf: Configuration, system: ActorSystem) {
   private implicit val iConf = conf
 
   /**
-    * Creates an ActionBuilder which holds a TokenBucketGroup with a bucket for each IP address.
-    * Every request consumes a token. If no tokens remain, the request is rejected.
+    * Creates an ActionBuilder with a bucket for each IP address.
     *
-    * @param size           bucket size
-    * @param rate           bucket refill rate per second
-    * @param logPrefix      prefix for internal logging
-    * @param rejectResponse response if request is rejected
+    * @param rl
+    * @param rejectResponse
     * @return
     */
-  def ipRateLimiterAction(size: Int, rate: Float, logPrefix: String = "")(rejectResponse: RequestHeader => Result) = new ActionFilter[Request] with ActionBuilder[Request] {
-
-    private val rl = RateLimiter(size, rate, logPrefix)
-
-    def filter[A](request: Request[A]) = {
+  def ipRateLimiterAction(rl: RateLimiter)(rejectResponse: RequestHeader => Result) = new ActionFilter[Request] with ActionBuilder[Request] {
+    def filter[A](request: Request[A]): Future[Option[Result]] = {
       rl.check(clientIp(request)).map { res =>
         if (res) None
         else Some(rejectResponse(request))
@@ -38,22 +32,36 @@ class ActionRateLimiter(conf: Configuration, system: ActorSystem) {
   }
 
   /**
-    * Creates an ActionBuilder which holds a TokenBucketGroup with a bucket for each key.
-    * Every request consumes a token. If no tokens remain, the request is rejected.
+    * Creates an ActionBuilder with a bucket for each key.
     *
-    * @param size           bucket size
-    * @param rate           bucket refill rate per second
-    * @param logPrefix      prefix for internal logging
-    * @param rejectResponse response if request is rejected
-    * @param key            the bucket key
+    * @param rl
+    * @param key
+    * @param rejectResponse
     * @return
     */
-  def keyRateLimiterAction(size: Int, rate: Float, logPrefix: String = "")(rejectResponse: RequestHeader => Result)(key: Any) = new ActionFilter[Request] with ActionBuilder[Request] {
+  def keyRateLimiterAction(rl: RateLimiter)(rejectResponse: RequestHeader => Result)(key: Any) = new ActionFilter[Request] with ActionBuilder[Request] {
 
-    private val rl = RateLimiter(size, rate, logPrefix)
-
-    def filter[A](request: Request[A]) = {
+    def filter[A](request: Request[A]): Future[Option[Result]] = {
       rl.check(key).map { res =>
+        if (res) None
+        else Some(rejectResponse(request))
+      }
+    }
+  }
+
+  /**
+    * Creates an ActionFilter to chain behind a Transformer/Refiner to use custom request attributes as key.
+    *
+    * @param rl
+    * @param rejectResponse
+    * @param f
+    * @tparam R
+    * @return
+    */
+  def customRequestRateLimiterFilter[R[_]](rl: RateLimiter)(rejectResponse: R[_] => Result)(f: R[_] => Any) = new ActionFilter[R] {
+
+    def filter[A](request: R[A]): Future[Option[Result]] = {
+      rl.check(f(request)).map { res =>
         if (res) None
         else Some(rejectResponse(request))
       }
@@ -62,53 +70,13 @@ class ActionRateLimiter(conf: Configuration, system: ActorSystem) {
 
 
   /**
-    * Creates an ActionBuilder which holds a TokenBucketGroup with a bucket for each IP address.
-    * Tokens are consumed only by failures. If no tokens remain, the request is rejected.
-    *
-    * @param size           token bucket size
-    * @param rate           token bucket rate (per second)
-    * @param rejectResponse response if request is rejected
-    * @param logPrefix      prefix for logging
-    * @param errorCodes     HTTP returns codes which cause a token consumption
-    * @return the ActionBuilder instance
-    */
-  def failureRateLimiterAction(size: Int, rate: Float,
-                       rejectResponse: RequestHeader => Result, logPrefix: String = "", errorCodes: Seq[Int] = 400 to 499) = new ActionBuilder[Request] {
-
-    private lazy val ipTbActorRef = TokenBucketGroup.create(system, size, rate)
-
-    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
-
-      TokenBucketGroup.consume(ipTbActorRef, clientIp(request), 0).flatMap {
-        remaining =>
-          if (remaining > 0) {
-            if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${clientIp(request)} below 50%: $remaining")
-            val res = block(request)
-            res.map {
-              r =>
-                if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, clientIp(request), 1)
-            }
-            res
-          } else {
-            logger.error(s"$logPrefix too many failed attempts from ${clientIp(request)}")
-            Future.successful(rejectResponse(request))
-          }
-      } recoverWith {
-        case NonFatal(ex) =>
-          logger.error(s"$logPrefix fail rate limiter failed", ex)
-          block(request) // let pass in case of internal failure
-      }
-    }
-  }
-
-  /**
     * Holds a TokenBucketGroup for rate limiting.
     *
     * @param size      bucket size
     * @param rate      bucket refill rate per second
     * @param logPrefix prefix for internal logging
     */
-  private final case class RateLimiter(size: Int, rate: Float, logPrefix: String = "") {
+  case class RateLimiter(size: Int, rate: Float, logPrefix: String = "") {
 
     private lazy val tbActorRef = TokenBucketGroup.create(system, size, rate)
 
@@ -132,6 +100,46 @@ class ActionRateLimiter(conf: Configuration, system: ActorSystem) {
         case NonFatal(ex) =>
           logger.error(s"$logPrefix rate limiter failed", ex)
           true
+      }
+    }
+  }
+
+  /**
+    * Creates an ActionBuilder which holds a TokenBucketGroup with a bucket for each IP address.
+    * Tokens are consumed only by failures. If no tokens remain, the request is rejected.
+    *
+    * @param size           token bucket size
+    * @param rate           token bucket rate (per second)
+    * @param rejectResponse response if request is rejected
+    * @param logPrefix      prefix for logging
+    * @param errorCodes     HTTP returns codes which cause a token consumption
+    * @return the ActionBuilder instance
+    */
+  def failureRateLimiterAction(size: Int, rate: Float,
+                               rejectResponse: RequestHeader => Result, logPrefix: String = "", errorCodes: Seq[Int] = 400 to 499) = new ActionBuilder[Request] {
+
+    private lazy val ipTbActorRef = TokenBucketGroup.create(system, size, rate)
+
+    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
+
+      TokenBucketGroup.consume(ipTbActorRef, clientIp(request), 0).flatMap {
+        remaining =>
+          if (remaining > 0) {
+            if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${clientIp(request)} below 50%: $remaining")
+            val res = block(request)
+            res.map {
+              r =>
+                if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, clientIp(request), 1)
+            }
+            res
+          } else {
+            logger.error(s"$logPrefix too many failed attempts from ${clientIp(request)}")
+            Future.successful(rejectResponse(request))
+          }
+      } recoverWith {
+        case NonFatal(ex) =>
+          logger.error(s"$logPrefix fail rate limiter failed", ex)
+          block(request) // let pass in case of internal failure
       }
     }
   }
