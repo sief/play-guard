@@ -1,4 +1,4 @@
-import com.digitaltangible.playguard.{ActionRateLimiter, GuardFilter}
+import com.digitaltangible.playguard.{ActionRateLimiter, ConfigIpChecker, GuardFilter}
 import controllers.{Assets, SampleController}
 import play.api.ApplicationLoader.Context
 import play.api._
@@ -22,7 +22,9 @@ class ApplicationComponents(context: Context) extends BuiltInComponentsFromConte
   lazy val router = new Routes(httpErrorHandler, controller, assets)
 
   lazy val rlActionBuilder = new ActionRateLimiter(configuration, actorSystem)
-  lazy val guardFilter = new GuardFilter(configuration, actorSystem)
+
+  lazy val ipChecker = new ConfigIpChecker(configuration)
+  lazy val guardFilter = new GuardFilter(configuration, actorSystem, ipChecker)
 
   override lazy val httpFilters: Seq[EssentialFilter] = Seq(guardFilter)
 

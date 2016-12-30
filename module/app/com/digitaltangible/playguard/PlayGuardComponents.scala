@@ -11,7 +11,9 @@ trait PlayGuardComponents {
 
   def actorSystem: ActorSystem
 
-  lazy val guardFilter = new GuardFilter(configuration, actorSystem)
+  lazy val ipChecker = new ConfigIpChecker(configuration)
+
+  lazy val guardFilter = new GuardFilter(configuration, actorSystem, ipChecker)
 
   lazy val rateLimitActionBuilder = new ActionRateLimiter(configuration, actorSystem)
 }

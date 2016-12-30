@@ -1,7 +1,5 @@
 package com.digitaltangible.playguard
 
-import java.io.File
-
 import akka.stream.Materializer
 import com.typesafe.config.ConfigFactory
 import org.scalatestplus.play._
@@ -41,7 +39,7 @@ class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
   "GuardFilter" should {
 
     "todo" in {
-      val filter = new GuardFilter(app.configuration, app.actorSystem)
+      val filter = new GuardFilter(app.configuration, app.actorSystem, new ConfigIpChecker(app.configuration))
       val rh = FakeRequest()
       val action = Action(Ok("success"))
       val result = filter(action)(rh).run()

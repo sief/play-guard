@@ -15,6 +15,24 @@ import play.api.{Configuration, Logger}
 import scala.concurrent._
 import scala.util.control.NonFatal
 
+
+trait IpChecker {
+  def isWhitelisted(ip: String): Boolean
+
+  def isBlacklisted(ip: String): Boolean
+}
+
+class ConfigIpChecker(conf: Configuration) extends IpChecker {
+
+  private lazy val IpWhitelist = conf.getStringSeq("playguard.filter.ip.whitelist").map(_.toSet).getOrElse(Set.empty)
+  private lazy val IpBlacklist = conf.getStringSeq("playguard.filter.ip.blacklist").map(_.toSet).getOrElse(Set.empty)
+
+
+  override def isWhitelisted(ip: String): Boolean = IpWhitelist.contains(ip)
+
+  override def isBlacklisted(ip: String): Boolean = IpBlacklist.contains(ip)
+}
+
 /**
   * Filter for rate limiting and IP whitelisting/blacklisting
   *
@@ -28,22 +46,21 @@ import scala.util.control.NonFatal
   * @param conf
   * @param system
   */
-class GuardFilter(conf: Configuration, system: ActorSystem) extends EssentialFilter {
+class GuardFilter(conf: Configuration, system: ActorSystem, ipListChecker: IpChecker) extends EssentialFilter {
 
   private val logger = Logger(this.getClass)
 
   private implicit val implicitConf = conf
 
-  private lazy val Enabled = conf.getBoolean("play.guard.filter.enabled").get
+  private lazy val Enabled = conf.getBoolean("playguard.filter.enabled").getOrElse(false)
 
-  private lazy val IpTokenBucketSize = conf.getInt("play.guard.filter.ip.bucket.size").get
-  private lazy val IpTokenBucketRate = conf.getInt("play.guard.filter.ip.bucket.rate").get
+  private lazy val IpTokenBucketSize = requiredConfInt("playguard.filter.ip.bucket.size")
+  private lazy val IpTokenBucketRate = requiredConfInt("playguard.filter.ip.bucket.rate")
 
-  private lazy val GlobalTokenBucketSize = conf.getInt("play.guard.filter.global.bucket.size").get
-  private lazy val GlobalTokenBucketRate = conf.getInt("play.guard.filter.global.bucket.rate").get
+  private lazy val GlobalTokenBucketSize = requiredConfInt("playguard.filter.global.bucket.size")
+  private lazy val GlobalTokenBucketRate = requiredConfInt("playguard.filter.global.bucket.rate")
 
-  private lazy val IpWhitelist = conf.getString("play.guard.filter.ip.whitelist").fold(Vector[String]())(_.split(',').toVector)
-  private lazy val IpBlacklist = conf.getString("play.guard.filter.ip.blacklist").fold(Vector[String]())(_.split(',').toVector)
+  private def requiredConfInt(key: String): Int = conf.getInt(key).getOrElse(sys.error(s"missing or invalid config value: $key"))
 
   private lazy val ipTbActorRef = TokenBucketGroup.create(system, IpTokenBucketSize, IpTokenBucketRate)
   private lazy val globalTbActorRef = TokenBucketGroup.create(system, GlobalTokenBucketSize, GlobalTokenBucketRate)
@@ -51,9 +68,10 @@ class GuardFilter(conf: Configuration, system: ActorSystem) extends EssentialFil
   private implicit val materializer = ActorMaterializer()(system)
 
   def apply(next: EssentialAction) = EssentialAction { implicit request: RequestHeader =>
+    lazy val ip = clientIp(request)
     if (!Enabled) next(request)
-    else if (IpWhitelist.contains(clientIp(request))) next(request)
-    else if (IpBlacklist.contains(clientIp(request))) done(Forbidden("IP address blocked"))
+    else if (ipListChecker.isWhitelisted(ip)) next(request)
+    else if (ipListChecker.isBlacklisted(ip)) done(Forbidden("IP address blocked"))
     else {
       val ts = System.currentTimeMillis()
       Accumulator.flatten(checkRateLimits(clientIp(request)).map { res =>
