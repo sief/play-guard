@@ -6,11 +6,11 @@ import org.scalatestplus.play._
 import play.api
 import play.api.ApplicationLoader.Context
 import play.api._
-import play.api.mvc.Action
 import play.api.mvc.Results._
+import play.api.mvc.{Action, AnyContentAsEmpty}
 import play.api.routing.Router
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import play.api.test.{FakeHeaders, FakeRequest}
 
 class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
 
@@ -38,12 +38,21 @@ class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
 
   "GuardFilter" should {
 
-    "todo" in {
-      val filter = new GuardFilter(app.configuration, app.actorSystem, new ConfigIpChecker(app.configuration))
-      val rh = FakeRequest()
+    "not block unlisted IP" in {
+      val filter = GuardFilter(app.configuration, app.actorSystem)
+      val rh = FakeRequest("GET", "/", FakeHeaders(), AnyContentAsEmpty, "0.0.0.0")
       val action = Action(Ok("success"))
       val result = filter(action)(rh).run()
       status(result) mustEqual OK
+    }
+
+
+    "block blacklisted IPs" in {
+      val filter = GuardFilter(app.configuration, app.actorSystem)
+      val rh = FakeRequest("GET", "/", FakeHeaders(), AnyContentAsEmpty, "3.3.3.3")
+      val action = Action(Ok("success"))
+      val result = filter(action)(rh).run()
+      status(result) mustEqual FORBIDDEN
     }
   }
 }

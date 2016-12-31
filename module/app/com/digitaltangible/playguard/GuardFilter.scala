@@ -2,7 +2,7 @@ package com.digitaltangible.playguard
 
 import java.util.NoSuchElementException
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.ActorMaterializer
 import com.digitaltangible.ratelimit.TokenBucketGroup
 import play.api.libs.concurrent.Execution.Implicits._
@@ -18,11 +18,10 @@ import scala.util.control.NonFatal
 
 trait IpChecker {
   def isWhitelisted(ip: String): Boolean
-
   def isBlacklisted(ip: String): Boolean
 }
 
-class ConfigIpChecker(conf: Configuration) extends IpChecker {
+class DefaultIpChecker(conf: Configuration) extends IpChecker {
 
   private lazy val IpWhitelist = conf.getStringSeq("playguard.filter.ip.whitelist").map(_.toSet).getOrElse(Set.empty)
   private lazy val IpBlacklist = conf.getStringSeq("playguard.filter.ip.blacklist").map(_.toSet).getOrElse(Set.empty)
@@ -31,6 +30,31 @@ class ConfigIpChecker(conf: Configuration) extends IpChecker {
   override def isWhitelisted(ip: String): Boolean = IpWhitelist.contains(ip)
 
   override def isBlacklisted(ip: String): Boolean = IpBlacklist.contains(ip)
+}
+
+
+trait TokenBucketGroupProvider {
+  val tokenBucketSize: Int
+  val tokenBucketRate: Int
+  val tbActorRef: ActorRef
+}
+
+trait DefaultTokenBucketGroupProvider extends TokenBucketGroupProvider {
+  protected val conf: Configuration
+  protected val system: ActorSystem
+  lazy val tbActorRef: ActorRef = TokenBucketGroup.create(system, tokenBucketSize, tokenBucketRate)
+
+  protected def requiredConfInt(key: String): Int = conf.getInt(key).getOrElse(sys.error(s"missing or invalid config value: $key"))
+}
+
+class DefaultIpTokenBucketGroupProvider(val conf: Configuration, val system: ActorSystem) extends DefaultTokenBucketGroupProvider {
+  lazy val tokenBucketSize: Int = requiredConfInt("playguard.filter.ip.bucket.size")
+  lazy val tokenBucketRate: Int = requiredConfInt("playguard.filter.ip.bucket.rate")
+}
+
+class DefaultGlobalTokenBucketGroupProvider(val conf: Configuration, val system: ActorSystem) extends DefaultTokenBucketGroupProvider {
+  lazy val tokenBucketSize: Int = requiredConfInt("playguard.filter.global.bucket.size")
+  lazy val tokenBucketRate: Int = requiredConfInt("playguard.filter.global.bucket.rate")
 }
 
 /**
@@ -43,29 +67,20 @@ class ConfigIpChecker(conf: Configuration) extends IpChecker {
   * 3. else if IP rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
   * 4. else if global rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
   *
-  * @param conf
-  * @param system
   */
-class GuardFilter(conf: Configuration, system: ActorSystem, ipListChecker: IpChecker) extends EssentialFilter {
+class GuardFilter(conf: Configuration,
+                  system: ActorSystem,
+                  ipTokenBucketGroupProvider: TokenBucketGroupProvider,
+                  globalTokenBucketGroupProvider: TokenBucketGroupProvider,
+                  ipListChecker: IpChecker) extends EssentialFilter {
 
   private val logger = Logger(this.getClass)
 
   private implicit val implicitConf = conf
 
+  private implicit val materializer: ActorMaterializer = ActorMaterializer()(system)
+
   private lazy val Enabled = conf.getBoolean("playguard.filter.enabled").getOrElse(false)
-
-  private lazy val IpTokenBucketSize = requiredConfInt("playguard.filter.ip.bucket.size")
-  private lazy val IpTokenBucketRate = requiredConfInt("playguard.filter.ip.bucket.rate")
-
-  private lazy val GlobalTokenBucketSize = requiredConfInt("playguard.filter.global.bucket.size")
-  private lazy val GlobalTokenBucketRate = requiredConfInt("playguard.filter.global.bucket.rate")
-
-  private def requiredConfInt(key: String): Int = conf.getInt(key).getOrElse(sys.error(s"missing or invalid config value: $key"))
-
-  private lazy val ipTbActorRef = TokenBucketGroup.create(system, IpTokenBucketSize, IpTokenBucketRate)
-  private lazy val globalTbActorRef = TokenBucketGroup.create(system, GlobalTokenBucketSize, GlobalTokenBucketRate)
-
-  private implicit val materializer = ActorMaterializer()(system)
 
   def apply(next: EssentialAction) = EssentialAction { implicit request: RequestHeader =>
     lazy val ip = clientIp(request)
@@ -100,15 +115,15 @@ class GuardFilter(conf: Configuration, system: ActorSystem, ipListChecker: IpChe
   }
 
   private def checkIpRate(ip: String): Future[Boolean] = {
-    TokenBucketGroup.consume(ipTbActorRef, ip, 1).map { remaining =>
-      logBucketLevel(s"IP $ip", remaining, IpTokenBucketSize)
+    TokenBucketGroup.consume(ipTokenBucketGroupProvider.tbActorRef, ip, 1).map { remaining =>
+      logBucketLevel(s"IP $ip", remaining, ipTokenBucketGroupProvider.tokenBucketSize)
       remaining >= 0
     }
   }
 
   private def checkGlobalRate() = {
-    TokenBucketGroup.consume(globalTbActorRef, "G", 1).map { remaining =>
-      logBucketLevel("Global", remaining, GlobalTokenBucketSize)
+    TokenBucketGroup.consume(globalTokenBucketGroupProvider.tbActorRef, "G", 1).map { remaining =>
+      logBucketLevel("Global", remaining, globalTokenBucketGroupProvider.tokenBucketSize)
       remaining >= 0
     }
   }
@@ -118,4 +133,16 @@ class GuardFilter(conf: Configuration, system: ActorSystem, ipListChecker: IpChe
     else if (remaining < bucketSize.toFloat / 2) logger.warn(s"$prefix rate limit below 50%: $remaining")
     else logger.debug(s"$prefix bucket level: $remaining")
   }
+}
+
+object GuardFilter {
+  def apply(configuration: Configuration,
+            actorSystem: ActorSystem): GuardFilter =
+
+    new GuardFilter(
+      configuration,
+      actorSystem,
+      new DefaultIpTokenBucketGroupProvider(configuration, actorSystem),
+      new DefaultGlobalTokenBucketGroupProvider(configuration, actorSystem),
+      new DefaultIpChecker(configuration))
 }
