@@ -84,13 +84,13 @@ class GuardFilter(conf: Configuration,
   private lazy val Enabled = conf.getBoolean("playguard.filter.enabled").getOrElse(false)
 
   def apply(next: EssentialAction) = EssentialAction { implicit request: RequestHeader =>
-    lazy val ip = clientIp(request)
+    lazy val ip = clientIp(request, conf)
     if (!Enabled) next(request)
     else if (ipListChecker.isWhitelisted(ip)) next(request)
     else if (ipListChecker.isBlacklisted(ip)) done(Forbidden("IP address blocked"))
     else {
       val ts = System.currentTimeMillis()
-      Accumulator.flatten(checkRateLimits(clientIp(request)).map { res =>
+      Accumulator.flatten(checkRateLimits(clientIp(request, conf)).map { res =>
         logger.debug(s"rate limit check took ${System.currentTimeMillis() - ts} ms")
         if (res) next(request)
         else done(TooManyRequests("too many requests"))

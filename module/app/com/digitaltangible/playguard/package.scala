@@ -5,7 +5,7 @@ import play.api.mvc.RequestHeader
 
 package object playguard {
 
-  def clientIp(request: RequestHeader)(implicit conf: Configuration): String = {
+  def clientIp(request: RequestHeader, conf: Configuration): String = {
     (for {
       configuredHeader <- conf.getString("playguard.clientipheader")
       ip <- request.headers.get(configuredHeader)

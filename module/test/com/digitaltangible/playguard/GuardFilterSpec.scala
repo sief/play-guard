@@ -9,13 +9,12 @@ import org.scalatestplus.play._
 import play.api
 import play.api.ApplicationLoader.Context
 import play.api._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Results._
 import play.api.mvc.{Action, AnyContentAsEmpty}
 import play.api.routing.Router
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
 

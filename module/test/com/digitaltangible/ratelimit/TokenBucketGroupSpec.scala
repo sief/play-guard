@@ -7,8 +7,7 @@ import org.scalacheck.Gen
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{FlatSpecLike, Matchers}
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.concurrent.Execution.Implicits._
 
 
 class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) with FlatSpecLike with Matchers with ScalaFutures with GeneratorDrivenPropertyChecks {
