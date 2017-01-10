@@ -2,6 +2,7 @@ package com.digitaltangible.ratelimit
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
+import com.digitaltangible.FakeClock
 import org.scalacheck.Gen
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
@@ -11,12 +12,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 
 class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) with FlatSpecLike with Matchers with ScalaFutures with GeneratorDrivenPropertyChecks {
-
-  class FakeClock extends Clock {
-    var ts: Long = 0
-
-    override def now: Long = ts
-  }
 
   "TokenBucketGroup.create" should
     "allow only values for size and rate in their range" in {

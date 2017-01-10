@@ -18,6 +18,7 @@ import scala.util.control.NonFatal
 
 trait IpChecker {
   def isWhitelisted(ip: String): Boolean
+
   def isBlacklisted(ip: String): Boolean
 }
 
