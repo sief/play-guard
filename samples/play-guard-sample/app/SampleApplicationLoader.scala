@@ -17,11 +17,9 @@ class SampleApplicationLoader extends ApplicationLoader {
 
 class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context){
 
-  lazy val controller = new SampleController(rlActionBuilder)
+  lazy val controller = new SampleController(configuration, actorSystem)
   lazy val assets = new Assets(httpErrorHandler)
   lazy val router = new Routes(httpErrorHandler, controller, assets)
-
-  lazy val rlActionBuilder = new ActionRateLimiter(configuration, actorSystem)
 
   lazy val guardFilter = GuardFilter(configuration, actorSystem)
 

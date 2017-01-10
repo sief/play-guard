@@ -21,6 +21,10 @@ trait Clock {
   def now: Long
 }
 
+object CurrentTimeClock extends Clock {
+  override def now: Long = System.currentTimeMillis
+}
+
 /**
  * Actor message for consuming tokens
  * @param key bucket key
@@ -101,9 +105,7 @@ object TokenBucketGroup {
    * @param context akka execution context
    * @return actorRef, needed to call consume later.
    */
-  def create(system: ActorSystem, size: Int, rate: Float, clock: Clock = new Clock {
-    override def now: Long = System.currentTimeMillis
-  })(implicit context: ExecutionContext): ActorRef = {
+  def create(system: ActorSystem, size: Int, rate: Float, clock: Clock = CurrentTimeClock)(implicit context: ExecutionContext): ActorRef = {
     require(size > 0)
     require(size <= 1000)
     require(rate >= 0.000001f)

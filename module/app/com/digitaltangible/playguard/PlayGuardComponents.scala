@@ -12,8 +12,6 @@ trait PlayGuardComponents {
   def actorSystem: ActorSystem
 
   lazy val guardFilter = GuardFilter(configuration, actorSystem)
-
-  lazy val rateLimitActionBuilder = new ActionRateLimiter(configuration, actorSystem)
 }
 
 
