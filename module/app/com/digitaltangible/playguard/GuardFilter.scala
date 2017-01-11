@@ -1,6 +1,7 @@
 package com.digitaltangible.playguard
 
 import java.util.NoSuchElementException
+import javax.inject.{Inject, Named, Singleton}
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.ActorMaterializer
@@ -15,14 +16,14 @@ import play.api.{Configuration, Logger}
 import scala.concurrent._
 import scala.util.control.NonFatal
 
-
 trait IpChecker {
   def isWhitelisted(ip: String): Boolean
 
   def isBlacklisted(ip: String): Boolean
 }
 
-class DefaultIpChecker(conf: Configuration) extends IpChecker {
+@Singleton
+class DefaultIpChecker @Inject()(conf: Configuration) extends IpChecker {
 
   private lazy val IpWhitelist = conf.getStringSeq("playguard.filter.ip.whitelist").map(_.toSet).getOrElse(Set.empty)
   private lazy val IpBlacklist = conf.getStringSeq("playguard.filter.ip.blacklist").map(_.toSet).getOrElse(Set.empty)
@@ -48,12 +49,14 @@ trait DefaultTokenBucketGroupProvider extends TokenBucketGroupProvider {
   protected def requiredConfInt(key: String): Int = conf.getInt(key).getOrElse(sys.error(s"missing or invalid config value: $key"))
 }
 
-class DefaultIpTokenBucketGroupProvider(val conf: Configuration, val system: ActorSystem) extends DefaultTokenBucketGroupProvider {
+@Singleton
+class DefaultIpTokenBucketGroupProvider @Inject()(val conf: Configuration, val system: ActorSystem) extends DefaultTokenBucketGroupProvider {
   lazy val tokenBucketSize: Int = requiredConfInt("playguard.filter.ip.bucket.size")
   lazy val tokenBucketRate: Int = requiredConfInt("playguard.filter.ip.bucket.rate")
 }
 
-class DefaultGlobalTokenBucketGroupProvider(val conf: Configuration, val system: ActorSystem) extends DefaultTokenBucketGroupProvider {
+@Singleton
+class DefaultGlobalTokenBucketGroupProvider @Inject()(val conf: Configuration, val system: ActorSystem) extends DefaultTokenBucketGroupProvider {
   lazy val tokenBucketSize: Int = requiredConfInt("playguard.filter.global.bucket.size")
   lazy val tokenBucketRate: Int = requiredConfInt("playguard.filter.global.bucket.rate")
 }
@@ -69,11 +72,12 @@ class DefaultGlobalTokenBucketGroupProvider(val conf: Configuration, val system:
   * 4. else if global rate limit exceeded => reject with ‘429 TOO_MANY_REQUEST’
   *
   */
-class GuardFilter(conf: Configuration,
-                  system: ActorSystem,
-                  ipTokenBucketGroupProvider: TokenBucketGroupProvider,
-                  globalTokenBucketGroupProvider: TokenBucketGroupProvider,
-                  ipListChecker: IpChecker) extends EssentialFilter {
+@Singleton
+class GuardFilter @Inject()(conf: Configuration,
+                            system: ActorSystem,
+                            @Named("ip") ipTokenBucketGroupProvider: TokenBucketGroupProvider,
+                            @Named("global") globalTokenBucketGroupProvider: TokenBucketGroupProvider,
+                            ipListChecker: IpChecker) extends EssentialFilter {
 
   private val logger = Logger(this.getClass)
 
