@@ -1,4 +1,4 @@
-package com.digitaltangible.ratelimit
+package com.digitaltangible.tokenbucket
 
 import java.util.concurrent.TimeUnit
 
@@ -14,16 +14,6 @@ import scala.concurrent.{ExecutionContext, Future}
  */
 
 
-/**
- * For mocking the current time.
- */
-trait Clock {
-  def now: Long
-}
-
-object CurrentTimeClock extends Clock {
-  override def now: Long = System.currentTimeMillis
-}
 
 /**
  * Actor message for consuming tokens

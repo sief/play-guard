@@ -17,9 +17,9 @@ import play.api.http.DefaultHttpFilters
   * @param env           Basic environment settings for the current application.
   * @param exampleFilter A demonstration filter that adds a header to
   *                      each response.
+  * @param guardFilter   the guardFilter to test with this sample app
   */
 @Singleton
-class Filters @Inject()(
-                         env: Environment,
-                         exampleFilter: ExampleFilter,
-                         guardFilter: GuardFilter) extends DefaultHttpFilters(exampleFilter, guardFilter)
+class Filters @Inject()(env: Environment,
+                        exampleFilter: ExampleFilter,
+                        guardFilter: GuardFilter) extends DefaultHttpFilters(exampleFilter, guardFilter)

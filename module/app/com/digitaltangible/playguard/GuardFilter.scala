@@ -5,7 +5,7 @@ import javax.inject.{Inject, Named, Singleton}
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.ActorMaterializer
-import com.digitaltangible.ratelimit.TokenBucketGroup
+import com.digitaltangible.tokenbucket.TokenBucketGroup
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.streams.Accumulator
 import play.api.libs.streams.Accumulator._
@@ -73,11 +73,11 @@ class DefaultGlobalTokenBucketGroupProvider @Inject()(val conf: Configuration, v
   *
   */
 @Singleton
-class GuardFilter @Inject()(conf: Configuration,
+class GuardFilter @Inject()(val conf: Configuration,
                             system: ActorSystem,
                             @Named("ip") ipTokenBucketGroupProvider: TokenBucketGroupProvider,
                             @Named("global") globalTokenBucketGroupProvider: TokenBucketGroupProvider,
-                            ipListChecker: IpChecker) extends EssentialFilter {
+                            ipListChecker: IpChecker) extends EssentialFilter with IpResolver {
 
   private val logger = Logger(this.getClass)
 
@@ -88,13 +88,13 @@ class GuardFilter @Inject()(conf: Configuration,
   private lazy val Enabled = conf.getBoolean("playguard.filter.enabled").getOrElse(false)
 
   def apply(next: EssentialAction) = EssentialAction { implicit request: RequestHeader =>
-    lazy val ip = clientIp(request, conf)
+    lazy val ip = clientIp(request)
     if (!Enabled) next(request)
     else if (ipListChecker.isWhitelisted(ip)) next(request)
     else if (ipListChecker.isBlacklisted(ip)) done(Forbidden("IP address blocked"))
     else {
       val ts = System.currentTimeMillis()
-      Accumulator.flatten(checkRateLimits(clientIp(request, conf)).map { res =>
+      Accumulator.flatten(checkRateLimits(clientIp(request)).map { res =>
         logger.debug(s"rate limit check took ${System.currentTimeMillis() - ts} ms")
         if (res) next(request)
         else done(TooManyRequests("too many requests"))
@@ -138,16 +138,4 @@ class GuardFilter @Inject()(conf: Configuration,
     else if (remaining < bucketSize.toFloat / 2) logger.warn(s"$prefix rate limit below 50%: $remaining")
     else logger.debug(s"$prefix bucket level: $remaining")
   }
-}
-
-object GuardFilter {
-  def apply(configuration: Configuration,
-            actorSystem: ActorSystem): GuardFilter =
-
-    new GuardFilter(
-      configuration,
-      actorSystem,
-      new DefaultIpTokenBucketGroupProvider(configuration, actorSystem),
-      new DefaultGlobalTokenBucketGroupProvider(configuration, actorSystem),
-      new DefaultIpChecker(configuration))
 }

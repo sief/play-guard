@@ -3,7 +3,7 @@ package com.digitaltangible.playguard
 import akka.actor.ActorRef
 import akka.stream.Materializer
 import com.digitaltangible.FakeClock
-import com.digitaltangible.ratelimit.{Clock, TokenBucketGroup}
+import com.digitaltangible.tokenbucket.{Clock, CurrentTimeClock, TokenBucketGroup}
 import com.typesafe.config.ConfigFactory
 import org.scalatestplus.play._
 import play.api
@@ -42,15 +42,18 @@ class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
   "GuardFilter" should {
 
     "not block unlisted IP" in {
-      runFake("0.0.0.0") mustEqual OK
+      val filter = testFilter(app, CurrentTimeClock)
+      runFake("0.0.0.0", filter) mustEqual OK
     }
 
     "not block blacklisted but whitelisted IP" in {
-      runFake("2.2.2.2") mustEqual OK
+      val filter = testFilter(app, CurrentTimeClock)
+      runFake("2.2.2.2", filter) mustEqual OK
     }
 
     "block blacklisted and not whitelisted IP" in {
-      runFake("3.3.3.3") mustEqual FORBIDDEN
+      val filter = testFilter(app, CurrentTimeClock)
+      runFake("3.3.3.3", filter) mustEqual FORBIDDEN
     }
 
     "block unlisted IP after limit exeeded" in {
@@ -97,7 +100,7 @@ class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
     }
   }
 
-  private def runFake(ip: String, filter: GuardFilter = GuardFilter(app.configuration, app.actorSystem)): Int = {
+  private def runFake(ip: String, filter: GuardFilter): Int = {
     val rh = FakeRequest("GET", "/", FakeHeaders(), AnyContentAsEmpty, ip)
     val action = Action(Ok("success"))
     val result = filter(action)(rh).run()

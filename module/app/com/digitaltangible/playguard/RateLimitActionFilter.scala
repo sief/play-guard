@@ -1,7 +1,7 @@
 package com.digitaltangible.playguard
 
 import akka.actor.ActorSystem
-import com.digitaltangible.ratelimit.{Clock, CurrentTimeClock, TokenBucketGroup}
+import com.digitaltangible.tokenbucket.{Clock, CurrentTimeClock, TokenBucketGroup}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.{ActionBuilder, _}
 import play.api.{Configuration, Logger}
@@ -38,7 +38,7 @@ object IpRateLimitAction {
     * @return
     */
   def apply(conf: Configuration)(rl: RateLimiter)(rejectResponse: Request[_] => Result): RateLimitActionFilter[Request] with ActionBuilder[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse)(clientIp(_: RequestHeader, conf)) with ActionBuilder[Request]
+    new RateLimitActionFilter[Request](rl)(rejectResponse)(getClientIp(_: RequestHeader, conf)) with ActionBuilder[Request]
 }
 
 
@@ -121,18 +121,18 @@ object FailureRateLimitAction {
 
     def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
 
-      TokenBucketGroup.consume(ipTbActorRef, clientIp(request, conf), 0).flatMap {
+      TokenBucketGroup.consume(ipTbActorRef, getClientIp(request, conf), 0).flatMap {
         remaining =>
           if (remaining > 0) {
-            if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${clientIp(request, conf)} below 50%: $remaining")
+            if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${getClientIp(request, conf)} below 50%: $remaining")
             val res = block(request)
             res.map {
               r =>
-                if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, clientIp(request, conf), 1)
+                if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, getClientIp(request, conf), 1)
             }
             res
           } else {
-            logger.error(s"$logPrefix too many failed attempts from ${clientIp(request, conf)}")
+            logger.error(s"$logPrefix too many failed attempts from ${getClientIp(request, conf)}")
             Future.successful(rejectResponse(request))
           }
       } recoverWith {

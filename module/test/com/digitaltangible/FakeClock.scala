@@ -1,6 +1,6 @@
 package com.digitaltangible
 
-import com.digitaltangible.ratelimit.Clock
+import com.digitaltangible.tokenbucket.Clock
 
 class FakeClock extends Clock {
   var ts: Long = 0

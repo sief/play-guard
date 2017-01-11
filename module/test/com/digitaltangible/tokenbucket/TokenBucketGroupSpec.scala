@@ -1,4 +1,4 @@
-package com.digitaltangible.ratelimit
+package com.digitaltangible.tokenbucket
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit

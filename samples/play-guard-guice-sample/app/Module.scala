@@ -1,6 +1,6 @@
-import java.time.Clock
-
+import com.digitaltangible.playguard.IpChecker
 import com.google.inject.AbstractModule
+import filters.DummyIpChecker
 
 
 /**
@@ -16,8 +16,8 @@ import com.google.inject.AbstractModule
 class Module extends AbstractModule {
 
   override def configure() = {
-    // Use the system clock as the default implementation of Clock
-    bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
-  }
 
+    // uncomment to bind the DummyIpChecker, for this you have to disable the module com.digitaltangible.playguard.PlayGuardIpCheckerModule in application.conf
+//     bind(classOf[IpChecker]).toInstance(new DummyIpChecker)
+  }
 }
