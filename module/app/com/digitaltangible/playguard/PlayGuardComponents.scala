@@ -8,17 +8,15 @@ import play.api.{Configuration, Environment}
 // for compile-time DI
 trait PlayGuardComponents {
 
-  def configuration: Configuration
+  implicit val configuration: Configuration
 
-  def actorSystem: ActorSystem
+  implicit val actorSystem: ActorSystem
 
   lazy val ipTokenBucketGroupProvider = new DefaultIpTokenBucketGroupProvider(configuration, actorSystem)
   lazy val globalTokenBucketGroupProvider = new DefaultGlobalTokenBucketGroupProvider(configuration, actorSystem)
   lazy val ipChecker = new DefaultIpChecker(configuration)
 
   lazy val guardFilter = new GuardFilter(
-    configuration,
-    actorSystem,
     ipTokenBucketGroupProvider,
     globalTokenBucketGroupProvider,
     ipChecker)

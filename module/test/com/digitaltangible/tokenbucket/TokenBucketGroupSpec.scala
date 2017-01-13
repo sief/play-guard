@@ -16,17 +16,17 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
     "allow only values for size and rate in their range" in {
     forAll { (size: Int, rate: Float) =>
       if ((1 to 1000 contains size) && (rate <= 1 && rate >= 0.000001f)) {
-        TokenBucketGroup.create(system, size, rate)
+        TokenBucketGroup.create(size, rate)
       } else {
         intercept[IllegalArgumentException] {
-          TokenBucketGroup.create(system, size, rate)
+          TokenBucketGroup.create(size, rate)
         }
       }
       ()
     }
-    TokenBucketGroup.create(system, 1, 0.000001f)
+    TokenBucketGroup.create(1, 0.000001f)
     intercept[IllegalArgumentException] {
-      TokenBucketGroup.create(system, 1, 0.0000001f)
+      TokenBucketGroup.create(1, 0.0000001f)
     }
   }
 
@@ -34,7 +34,7 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
     "allow 'token count' <= 'bucket size' at the same moment" in {
     val fakeClock = new FakeClock
     forAll(Gen.choose(0, 1000)) { (i: Int) =>
-      val ref = TokenBucketGroup.create(system, 1000, 2, fakeClock)
+      val ref = TokenBucketGroup.create(1000, 2, fakeClock)
       TokenBucketGroup.consume(ref, "x", i).futureValue shouldBe 1000 - i
     }
   }
@@ -42,13 +42,13 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
   it should "not allow 'token count' > 'bucket size' at the same moment" in {
     val fakeClock = new FakeClock
     forAll(Gen.posNum[Int]) { (i: Int) =>
-      val ref = TokenBucketGroup.create(system, 1000, 2, fakeClock)
+      val ref = TokenBucketGroup.create(1000, 2, fakeClock)
       TokenBucketGroup.consume(ref, "x", i + 1000).futureValue shouldBe -i
     }
   }
 
   it should "not allow negative token count" in {
-    val ref = TokenBucketGroup.create(system, 100, 2)
+    val ref = TokenBucketGroup.create(100, 2)
     forAll(Gen.negNum[Int]) { (i: Int) =>
       intercept[IllegalArgumentException] {
         TokenBucketGroup.consume(ref, "x", i)
@@ -58,7 +58,7 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
 
   it should "handle different keys separately" in {
     val fakeClock = new FakeClock
-    val ref = TokenBucketGroup.create(system, 1000, 2, fakeClock)
+    val ref = TokenBucketGroup.create(1000, 2, fakeClock)
     TokenBucketGroup.consume(ref, "asdf", 1000).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "qwer", 1000).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, 1, 1000).futureValue shouldBe 0
@@ -71,7 +71,7 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
 
   it should "regain tokens at specified rate" in {
     val fakeClock = new FakeClock
-    val ref = TokenBucketGroup.create(system, 100, 10, fakeClock)
+    val ref = TokenBucketGroup.create(100, 10, fakeClock)
     TokenBucketGroup.consume(ref, "x", 100).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
 
@@ -95,7 +95,7 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
 
   it should "regain tokens at specified rate < 1" in {
     val fakeClock = new FakeClock
-    val ref = TokenBucketGroup.create(system, 10, 0.1f, fakeClock)
+    val ref = TokenBucketGroup.create(10, 0.1f, fakeClock)
     TokenBucketGroup.consume(ref, "x", 10).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
     TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 0
@@ -125,7 +125,7 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
 
   it should "not overflow" in {
     val fakeClock = new FakeClock
-    val ref = TokenBucketGroup.create(system, 1000, 100, fakeClock)
+    val ref = TokenBucketGroup.create(1000, 100, fakeClock)
     TokenBucketGroup.consume(ref, "x", 1000).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 1).futureValue shouldBe -1
 
@@ -140,7 +140,7 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
 
   it should "not underflow" in {
     val fakeClock = new FakeClock
-    val ref = TokenBucketGroup.create(system, 100, 10, fakeClock)
+    val ref = TokenBucketGroup.create(100, 10, fakeClock)
     TokenBucketGroup.consume(ref, "x", 100).futureValue shouldBe 0
     TokenBucketGroup.consume(ref, "x", 100).futureValue shouldBe -100
     TokenBucketGroup.consume(ref, "x", 0).futureValue shouldBe 0
@@ -155,7 +155,7 @@ class TokenBucketGroupSpec extends TestKit(ActorSystem("TokenBucketGroupTest")) 
    * NOTE: this realtime test might fail on slow machines
    */
   it should "regain tokens at specified rate with real clock" in {
-    val ref = TokenBucketGroup.create(system, 200, 1000)
+    val ref = TokenBucketGroup.create(200, 1000)
     TokenBucketGroup.consume(ref, "x", 200).futureValue should be >= 0
     TokenBucketGroup.consume(ref, "x", 200).futureValue should be < 0
 

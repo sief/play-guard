@@ -37,8 +37,8 @@ object IpRateLimitAction {
     * @param rejectResponse
     * @return
     */
-  def apply(conf: Configuration)(rl: RateLimiter)(rejectResponse: Request[_] => Result): RateLimitActionFilter[Request] with ActionBuilder[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse)(getClientIp(_: RequestHeader, conf)) with ActionBuilder[Request]
+  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration): RateLimitActionFilter[Request] with ActionBuilder[Request] =
+    new RateLimitActionFilter[Request](rl)(rejectResponse)(getClientIp) with ActionBuilder[Request]
 }
 
 
@@ -63,16 +63,16 @@ class RateLimitActionFilter[R[_]](rl: RateLimiter)(rejectResponse: R[_] => Resul
 /**
   * Holds a TokenBucketGroup for rate limiting.
   *
-  * @param system
   * @param size
   * @param rate
   * @param logPrefix
+  * @param system
   */
-case class RateLimiter(system: ActorSystem)(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock) {
+class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock)(implicit system: ActorSystem) {
 
   private val logger = Logger(this.getClass)
 
-  private lazy val tbActorRef = TokenBucketGroup.create(system, size, rate, clock)
+  private lazy val tbActorRef = TokenBucketGroup.create(size, rate, clock)
 
   /**
     * Checks if the bucket for the given key has at least one token left.
@@ -107,32 +107,35 @@ object FailureRateLimitAction {
     * Creates an ActionBuilder which holds a TokenBucketGroup with a bucket for each IP address.
     * Tokens are consumed only by failures. If no tokens remain, the request is rejected.
     *
-    * @param size           token bucket size
-    * @param rate           token bucket rate (per second)
-    * @param rejectResponse response if request is rejected
-    * @param logPrefix      prefix for logging
-    * @param errorCodes     HTTP returns codes which cause a token consumption
-    * @return the ActionBuilder instance
+    * @param size
+    * @param rate
+    * @param rejectResponse
+    * @param logPrefix
+    * @param errorCodes
+    * @param system
+    * @param conf
+    * @return
     */
-  def apply(conf: Configuration, system: ActorSystem)(size: Int, rate: Float,
-                                                      rejectResponse: Request[_] => Result, logPrefix: String = "", errorCodes: Seq[Int] = 400 to 499) = new ActionBuilder[Request] {
 
-    private lazy val ipTbActorRef = TokenBucketGroup.create(system, size, rate)
+  def apply(size: Int, rate: Float, rejectResponse: Request[_] => Result, logPrefix: String = "",
+            errorCodes: Seq[Int] = 400 to 499)(implicit system: ActorSystem, conf: Configuration) = new ActionBuilder[Request] {
+
+    private lazy val ipTbActorRef = TokenBucketGroup.create(size, rate)
 
     def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
 
-      TokenBucketGroup.consume(ipTbActorRef, getClientIp(request, conf), 0).flatMap {
+      TokenBucketGroup.consume(ipTbActorRef, getClientIp(request), 0).flatMap {
         remaining =>
           if (remaining > 0) {
-            if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${getClientIp(request, conf)} below 50%: $remaining")
+            if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix fail rate limit for ${getClientIp(request)} below 50%: $remaining")
             val res = block(request)
             res.map {
               r =>
-                if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, getClientIp(request, conf), 1)
+                if (errorCodes contains r.header.status) TokenBucketGroup.consume(ipTbActorRef, getClientIp(request), 1)
             }
             res
           } else {
-            logger.error(s"$logPrefix too many failed attempts from ${getClientIp(request, conf)}")
+            logger.error(s"$logPrefix too many failed attempts from ${getClientIp(request)}")
             Future.successful(rejectResponse(request))
           }
       } recoverWith {

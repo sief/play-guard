@@ -17,7 +17,7 @@ class SampleApplicationLoader extends ApplicationLoader {
 
 class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context) with PlayGuardComponents {
 
-  lazy val controller = new SampleController(configuration, actorSystem)
+  lazy val controller = new SampleController()(actorSystem, configuration)
   lazy val assets = new Assets(httpErrorHandler)
   lazy val router = new Routes(httpErrorHandler, controller, assets)
 

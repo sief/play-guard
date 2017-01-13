@@ -1,6 +1,4 @@
-import com.digitaltangible.playguard.IpChecker
 import com.google.inject.AbstractModule
-import filters.DummyIpChecker
 
 
 /**

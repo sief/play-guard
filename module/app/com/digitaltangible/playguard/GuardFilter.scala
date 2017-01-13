@@ -43,8 +43,8 @@ trait TokenBucketGroupProvider {
 
 trait DefaultTokenBucketGroupProvider extends TokenBucketGroupProvider {
   protected val conf: Configuration
-  protected val system: ActorSystem
-  lazy val tbActorRef: ActorRef = TokenBucketGroup.create(system, tokenBucketSize, tokenBucketRate)
+  implicit protected val system: ActorSystem
+  lazy val tbActorRef: ActorRef = TokenBucketGroup.create(tokenBucketSize, tokenBucketRate)
 
   protected def requiredConfInt(key: String): Int = conf.getInt(key).getOrElse(sys.error(s"missing or invalid config value: $key"))
 }
@@ -73,28 +73,24 @@ class DefaultGlobalTokenBucketGroupProvider @Inject()(val conf: Configuration, v
   *
   */
 @Singleton
-class GuardFilter @Inject()(val conf: Configuration,
-                            system: ActorSystem,
-                            @Named("ip") ipTokenBucketGroupProvider: TokenBucketGroupProvider,
+class GuardFilter @Inject()(@Named("ip") ipTokenBucketGroupProvider: TokenBucketGroupProvider,
                             @Named("global") globalTokenBucketGroupProvider: TokenBucketGroupProvider,
-                            ipListChecker: IpChecker) extends EssentialFilter with IpResolver {
+                            ipListChecker: IpChecker)(implicit system: ActorSystem, conf: Configuration) extends EssentialFilter {
 
   private val logger = Logger(this.getClass)
 
-  private implicit val implicitConf = conf
-
-  private implicit val materializer: ActorMaterializer = ActorMaterializer()(system)
+  private implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   private lazy val Enabled = conf.getBoolean("playguard.filter.enabled").getOrElse(false)
 
   def apply(next: EssentialAction) = EssentialAction { implicit request: RequestHeader =>
-    lazy val ip = clientIp(request)
+    lazy val ip = getClientIp(request)
     if (!Enabled) next(request)
     else if (ipListChecker.isWhitelisted(ip)) next(request)
     else if (ipListChecker.isBlacklisted(ip)) done(Forbidden("IP address blocked"))
     else {
       val ts = System.currentTimeMillis()
-      Accumulator.flatten(checkRateLimits(clientIp(request)).map { res =>
+      Accumulator.flatten(checkRateLimits(ip).map { res =>
         logger.debug(s"rate limit check took ${System.currentTimeMillis() - ts} ms")
         if (res) next(request)
         else done(TooManyRequests("too many requests"))

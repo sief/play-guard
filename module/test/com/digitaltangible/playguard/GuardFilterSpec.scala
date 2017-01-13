@@ -108,14 +108,14 @@ class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
   }
 
   private def testFilter(app: Application, clock: Clock): GuardFilter = {
+    implicit val iSystem = app.actorSystem
+    implicit val iConf = app.configuration
     new GuardFilter(
-      app.configuration,
-      app.actorSystem,
       new DefaultIpTokenBucketGroupProvider(app.configuration, app.actorSystem) {
-        override lazy val tbActorRef: ActorRef = TokenBucketGroup.create(system, tokenBucketSize, tokenBucketRate, clock)
+        override lazy val tbActorRef: ActorRef = TokenBucketGroup.create(tokenBucketSize, tokenBucketRate, clock)
       },
       new DefaultGlobalTokenBucketGroupProvider(app.configuration, app.actorSystem) {
-        override lazy val tbActorRef: ActorRef = TokenBucketGroup.create(system, tokenBucketSize, tokenBucketRate, clock)
+        override lazy val tbActorRef: ActorRef = TokenBucketGroup.create(tokenBucketSize, tokenBucketRate, clock)
       },
       new DefaultIpChecker(app.configuration))
   }
