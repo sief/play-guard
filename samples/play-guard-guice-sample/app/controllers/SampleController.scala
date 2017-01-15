@@ -38,9 +38,9 @@ class SampleController @Inject()(implicit system: ActorSystem, conf: Configurati
 
 
   // allow 2 failures immediately and get a new token every 10 seconds
-  private val failRateLimitedAction = FailureRateLimitAction(2, 1f / 10, {
+  private val failRateLimitedAction = FailureRateLimitAction(new RateLimiter(2, 1f / 10, "test failure rate limit")) {
     implicit r: RequestHeader => BadRequest("failure rate exceeded")
-  }, "test failure rate limit")
+  }
 
   def failureLimitedByIp(fail: Boolean): Action[AnyContent] = failRateLimitedAction {
     if (fail) BadRequest("failed")
