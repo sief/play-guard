@@ -40,7 +40,7 @@ object IpRateLimitAction {
     * @return
     */
   def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration): RateLimitActionFilter[Request] with ActionBuilder[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse)(getClientIp) with ActionBuilder[Request]
+    new RateLimitActionFilter[Request](rl)(rejectResponse)(clientIp) with ActionBuilder[Request]
 }
 
 
@@ -54,10 +54,17 @@ object IpRateLimitAction {
   * @return
   */
 class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result)(f: R[_] => Any) extends ActionFilter[R] {
+
+  private val logger = Logger(this.getClass)
+
   def filter[A](request: R[A]): Future[Option[Result]] = {
-    rl.consumeAndCheck(f(request), request.path).map { res =>
+    val key = f(request)
+    rl.consumeAndCheck(key).map { res =>
       if (res) None
-      else Some(rejectResponse(request))
+      else {
+        logger.error(s"${request.method} ${request.uri} rejected, rate limit for $key exceeded.")
+        Some(rejectResponse(request))
+      }
     }
   }
 }
@@ -78,25 +85,28 @@ object FailureRateLimitAction {
   def apply(frl: RateLimiter)(rejectResponse: Request[_] => Result,
                               errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration) =
 
-    new FailureRateLimitFunction[Request](frl)(rejectResponse)(getClientIp, r => !(errorCodes contains r.header.status)) with ActionBuilder[Request]
+    new FailureRateLimitFunction[Request](frl)(rejectResponse)(clientIp, r => !(errorCodes contains r.header.status)) with ActionBuilder[Request]
 }
 
 /**
   * ActionFunction to be used on any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
   */
-class FailureRateLimitFunction[R[_] <: Request[_]](frl: RateLimiter)(rejectResponse: R[_] => Result)(keyFromRequest: R[_] => Any, resultCheck: Result => Boolean)(implicit conf: Configuration) extends ActionFunction[R, R] {
+class FailureRateLimitFunction[R[_] <: Request[_]](frl: RateLimiter)(rejectResponse: R[_] => Result)(keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R] {
+
+  private val logger = Logger(this.getClass)
 
   def invokeBlock[A](request: R[A], block: (R[A]) => Future[Result]): Future[Result] = {
 
     val key = keyFromRequest(request)
 
     (for {
-      ok <- frl.check(key, request.path)
+      ok <- frl.check(key)
       if ok
       res <- block(request)
       _ = if (!resultCheck(res)) frl.consume(key)
     } yield res).recover {
       case ex: NoSuchElementException =>
+        logger.error(s"${request.method} ${request.uri} rejected, failure rate limit for $key exceeded.")
         rejectResponse(request)
     }
   }
@@ -121,10 +131,10 @@ class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock =
     * Checks if the bucket for the given key has at least one token left.
     * If available, the token is consumed.
     *
-    * @param key bucket key
+    * @param key
     * @return
     */
-  def consumeAndCheck(key: Any, path: String): Future[Boolean] = consumeAndCheck(key, path, 1, _ >= 0)
+  def consumeAndCheck(key: Any): Future[Boolean] = consumeAndCheck(key, 1, _ >= 0)
 
   /**
     * Checks if the bucket for the given key has at least one token left.
@@ -132,16 +142,16 @@ class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock =
     * @param key bucket key
     * @return
     */
-  def check(key: Any, path: String): Future[Boolean] = consumeAndCheck(key, path, 0, _ > 0)
+  def check(key: Any): Future[Boolean] = consumeAndCheck(key, 0, _ > 0)
 
 
-  private def consumeAndCheck(key: Any, path: String, amount: Int, check: Int => Boolean): Future[Boolean] = {
+  private def consumeAndCheck(key: Any, amount: Int, check: Int => Boolean): Future[Boolean] = {
     TokenBucketGroup.consume(tbActorRef, key, amount).map { remaining =>
       if (check(remaining)) {
-        if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix rate limit for $key below 50%: $remaining, path: $path")
+        if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix remaining tokens for $key below 50%: $remaining")
         true
       } else {
-        logger.error(s"$logPrefix rate limit for $key exceeded, path: $path")
+        logger.error(s"$logPrefix rate limit for $key exceeded")
         false
       }
     } recover {

@@ -30,9 +30,9 @@ class SampleController @Inject()(implicit system: ActorSystem, conf: Configurati
 
 
   // allow 4 requests immediately and get a new token every 15 seconds
-  private val tokenRateLimitedAction = KeyRateLimitAction(new RateLimiter(4, 1f / 15, "test by token")) _
+  private val keyRateLimitedAction = KeyRateLimitAction(new RateLimiter(4, 1f / 15, "test by token")) _
 
-  def limitedByKey(key: String): Action[AnyContent] = tokenRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""))(key) {
+  def limitedByKey(key: String): Action[AnyContent] = keyRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""))(key) {
     Ok("limited by token")
   }
 
@@ -49,7 +49,7 @@ class SampleController @Inject()(implicit system: ActorSystem, conf: Configurati
 
   // combine tokenRateLimited and failRateLimited
   def limitByKeyAndFailureLimitedByIp(key: String, fail: Boolean): Action[AnyContent] =
-    (tokenRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""))(key) andThen failRateLimitedAction) {
+    (keyRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""))(key) andThen failRateLimitedAction) {
 
       if (fail) BadRequest("failed")
       else Ok("Ok")
