@@ -1,12 +1,12 @@
 package controllers
 
 import akka.actor.ActorSystem
-import com.digitaltangible.playguard.{FailureRateLimitAction, IpRateLimitAction, KeyRateLimitAction, RateLimiter}
+import com.digitaltangible.playguard.{HttpErrorRateLimitAction, IpRateLimitAction, KeyRateLimitAction, RateLimiter}
 import play.api.Configuration
 import play.api.mvc._
 
 /**
-  * Test dummy app for rate limit actions
+  * Sample app for rate limit actions
   */
 class SampleController(implicit system: ActorSystem, conf: Configuration) extends Controller {
 
@@ -27,24 +27,24 @@ class SampleController(implicit system: ActorSystem, conf: Configuration) extend
   // allow 4 requests immediately and get a new token every 15 seconds
   private val keyRateLimitedAction = KeyRateLimitAction(new RateLimiter(4, 1f / 15, "test by token")) _
 
-  def limitedByKey(key: String): Action[AnyContent] = keyRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""))(key) {
+  def limitedByKey(key: String): Action[AnyContent] = keyRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""), key) {
     Ok("limited by token")
   }
 
 
   // allow 2 failures immediately and get a new token every 10 seconds
-  private val failRateLimited = FailureRateLimitAction(new RateLimiter(2, 1f / 10, "test failure rate limit")) {
+  private val httpErrorRateLimited = HttpErrorRateLimitAction(new RateLimiter(2, 1f / 10, "test failure rate limit")) {
     implicit r: RequestHeader => BadRequest("failure rate exceeded")
   }
 
-  def failureLimitedByIp(fail: Boolean): Action[AnyContent] = failRateLimited {
+  def failureLimitedByIp(fail: Boolean): Action[AnyContent] = httpErrorRateLimited {
     if (fail) BadRequest("failed")
     else Ok("Ok")
   }
 
-  // combine tokenRateLimited and failRateLimited
-  def limitByKeyAndFailureLimitedByIp(key: String, fail: Boolean): Action[AnyContent] =
-    (keyRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""))(key) andThen failRateLimited) {
+  // combine tokenRateLimited and httpErrorRateLimited
+  def limitByKeyAndHttpErrorByIp(key: String, fail: Boolean): Action[AnyContent] =
+    (keyRateLimitedAction(_ => TooManyRequests( s"""rate limit for '$key' exceeded"""), key) andThen httpErrorRateLimited) {
 
       if (fail) BadRequest("failed")
       else Ok("Ok")

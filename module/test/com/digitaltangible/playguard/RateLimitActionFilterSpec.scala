@@ -6,8 +6,9 @@ import com.digitaltangible.FakeClock
 import org.scalatest.MustMatchers
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import play.api.Configuration
 import play.api.mvc.Results._
-import play.api.mvc.{ActionBuilder, EssentialAction, Request, Result}
+import play.api.mvc._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
@@ -17,6 +18,8 @@ class RateLimitActionFilterSpec extends PlaySpec with OneAppPerSuite with ScalaF
   implicit lazy val system: ActorSystem = app.actorSystem
 
   implicit lazy val materializer: Materializer = app.materializer
+
+  implicit lazy val conf: Configuration = app.configuration
 
   "RateLimiter" should {
     "consumeAndCheck for rate limiting" in {
@@ -56,7 +59,7 @@ class RateLimitActionFilterSpec extends PlaySpec with OneAppPerSuite with ScalaF
       val rl = new RateLimiter(2, 2, "test", fakeClock)
       val rejectResponse = (_: Request[_]) => TooManyRequests("test")
 
-      val action: EssentialAction = (new RateLimitActionFilter[Request](rl)(rejectResponse)(_ => "key") with ActionBuilder[Request]) {
+      val action: EssentialAction = (new RateLimitActionFilter[Request](rl)(rejectResponse, _ => "key") with ActionBuilder[Request]) {
         Ok("ok")
       }
       val request = FakeRequest(GET, "/")
@@ -77,10 +80,9 @@ class RateLimitActionFilterSpec extends PlaySpec with OneAppPerSuite with ScalaF
     "limit failure rate" in {
       val fakeClock = new FakeClock
       val rl = new RateLimiter(2, 2, "test", fakeClock)
-      val rejectResponse = (_: Request[_]) => BadRequest("test")
       val failFunc = (r: Result) => r.header.status == OK
 
-      val action: EssentialAction = (new FailureRateLimitFunction[Request](rl)(rejectResponse)(_ => "key", failFunc) with ActionBuilder[Request]) { request =>
+      val action: EssentialAction = (new FailureRateLimitFunction[Request](rl)(_ => BadRequest, _ => "key", failFunc) with ActionBuilder[Request]) { request =>
         if (request.path == "/") Ok
         else BadRequest
       }
@@ -99,6 +101,31 @@ class RateLimitActionFilterSpec extends PlaySpec with OneAppPerSuite with ScalaF
       status(result) mustEqual OK
       result = call(action, requestFail)
       status(result) mustEqual BAD_REQUEST
+      result = call(action, requestOk)
+      status(result) mustEqual BAD_REQUEST
+      fakeClock.ts = 501
+      result = call(action, requestOk)
+      status(result) mustEqual OK
+    }
+  }
+
+  "HttpErrorRateLimitAction" should {
+    "limit failure rate" in {
+      val fakeClock = new FakeClock
+      val rl = new RateLimiter(1, 2, "test", fakeClock)
+
+      val action = HttpErrorRateLimitAction(rl)(_ => BadRequest, Seq(UNAUTHORIZED))(conf) { request: RequestHeader =>
+        if (request.path == "/") Ok
+        else Unauthorized
+      }
+
+      val requestOk = FakeRequest(GET, "/")
+      val requestFail = FakeRequest(GET, "/x")
+
+      var result = call(action, requestOk)
+      status(result) mustEqual OK
+      result = call(action, requestFail)
+      status(result) mustEqual UNAUTHORIZED
       result = call(action, requestOk)
       status(result) mustEqual BAD_REQUEST
       fakeClock.ts = 501

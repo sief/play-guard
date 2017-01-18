@@ -23,8 +23,8 @@ object KeyRateLimitAction {
     * @param rejectResponse
     * @return
     */
-  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(key: Any): RateLimitActionFilter[Request] with ActionBuilder[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse)(_ => key) with ActionBuilder[Request]
+  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result, key: Any): RateLimitActionFilter[Request] with ActionBuilder[Request] =
+    new RateLimitActionFilter[Request](rl)(rejectResponse, _ => key) with ActionBuilder[Request]
 }
 
 
@@ -40,7 +40,7 @@ object IpRateLimitAction {
     * @return
     */
   def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration): RateLimitActionFilter[Request] with ActionBuilder[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse)(clientIp) with ActionBuilder[Request]
+    new RateLimitActionFilter[Request](rl)(rejectResponse, clientIp) with ActionBuilder[Request]
 }
 
 
@@ -54,7 +54,7 @@ object IpRateLimitAction {
   * @tparam R
   * @return
   */
-class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result)(f: R[_] => Any) extends ActionFilter[R] {
+class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, f: R[_] => Any) extends ActionFilter[R] {
 
   private val logger = Logger(this.getClass)
 
@@ -71,22 +71,22 @@ class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse:
 }
 
 
-object FailureRateLimitAction {
+object HttpErrorRateLimitAction {
 
   /**
     * Creates an Action which holds a RateLimiter with a bucket for each IP address.
     * Tokens are consumed only by failures determined by HTTP error codes. If no tokens remain, the request is rejected.
     *
-    * @param frl
+    * @param rl
     * @param rejectResponse
     * @param errorCodes
     * @param conf
     * @return
     */
-  def apply(frl: RateLimiter)(rejectResponse: Request[_] => Result,
-                              errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration) =
+  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result,
+                             errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration) =
 
-    new FailureRateLimitFunction[Request](frl)(rejectResponse)(clientIp, r => !(errorCodes contains r.header.status)) with ActionBuilder[Request]
+    new FailureRateLimitFunction[Request](rl)(rejectResponse, clientIp, r => !(errorCodes contains r.header.status)) with ActionBuilder[Request]
 }
 
 /**
@@ -100,7 +100,7 @@ object FailureRateLimitAction {
   * @param resultCheck
   * @tparam R
   */
-class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result)(keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R] {
+class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R] {
 
   private val logger = Logger(this.getClass)
 

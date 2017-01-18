@@ -7,7 +7,7 @@ GET     /                           controllers.SampleController.index
 GET     /limited                    controllers.SampleController.limitedByIp
 GET     /limited/:key               controllers.SampleController.limitedByKey(key)
 GET     /fail                       controllers.SampleController.failureLimitedByIp(fail: Boolean)
-GET     /chained/:key               controllers.SampleController.limitByKeyAndFailureLimitedByIp(key, fail: Boolean)
+GET     /chained/:key               controllers.SampleController.limitByKeyAndHttpErrorByIp(key, fail: Boolean)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

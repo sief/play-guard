@@ -8,6 +8,6 @@ scalaVersion := "2.11.8"
 
 
 libraryDependencies ++= Seq(
-  "com.digitaltangible" %% "play-guard" % "1.7.0-SNAPSHOT"
+  "com.digitaltangible" %% "play-guard" % "2.0.0-SNAPSHOT"
 )
 
