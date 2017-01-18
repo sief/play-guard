@@ -24,7 +24,7 @@ object KeyRateLimitAction {
     * @return
     */
   def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(key: Any): RateLimitActionFilter[Request] with ActionBuilder[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse)((_: Request[_]) => key) with ActionBuilder[Request]
+    new RateLimitActionFilter[Request](rl)(rejectResponse)(_ => key) with ActionBuilder[Request]
 }
 
 
@@ -45,7 +45,8 @@ object IpRateLimitAction {
 
 
 /**
-  * ActionFilter to be used on any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
+  * ActionFilter which holds a RateLimiter with a bucket for each key returned by function f.
+  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
   *
   * @param rl
   * @param rejectResponse
@@ -62,7 +63,7 @@ class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse:
     rl.consumeAndCheck(key).map { res =>
       if (res) None
       else {
-        logger.error(s"${request.method} ${request.uri} rejected, rate limit for $key exceeded.")
+        logger.warn(s"${request.method} ${request.uri} rejected, rate limit for $key exceeded.")
         Some(rejectResponse(request))
       }
     }
@@ -74,7 +75,7 @@ object FailureRateLimitAction {
 
   /**
     * Creates an Action which holds a RateLimiter with a bucket for each IP address.
-    * Tokens are consumed only by failures. If no tokens remain, the request is rejected.
+    * Tokens are consumed only by failures determined by HTTP error codes. If no tokens remain, the request is rejected.
     *
     * @param frl
     * @param rejectResponse
@@ -89,9 +90,17 @@ object FailureRateLimitAction {
 }
 
 /**
-  * ActionFunction to be used on any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
+  * ActionFunction which holds a RateLimiter with a bucket for each key returned by function keyFromRequest.
+  * Tokens are consumed only by failures determined by function resultCheck. If no tokens remain, requests with this key are rejected.
+  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
+  *
+  * @param rl
+  * @param rejectResponse
+  * @param keyFromRequest
+  * @param resultCheck
+  * @tparam R
   */
-class FailureRateLimitFunction[R[_] <: Request[_]](frl: RateLimiter)(rejectResponse: R[_] => Result)(keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R] {
+class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result)(keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R] {
 
   private val logger = Logger(this.getClass)
 
@@ -100,13 +109,13 @@ class FailureRateLimitFunction[R[_] <: Request[_]](frl: RateLimiter)(rejectRespo
     val key = keyFromRequest(request)
 
     (for {
-      ok <- frl.check(key)
+      ok <- rl.check(key)
       if ok
       res <- block(request)
-      _ = if (!resultCheck(res)) frl.consume(key)
+      _ = if (!resultCheck(res)) rl.consume(key)
     } yield res).recover {
       case ex: NoSuchElementException =>
-        logger.error(s"${request.method} ${request.uri} rejected, failure rate limit for $key exceeded.")
+        logger.warn(s"${request.method} ${request.uri} rejected, failure rate limit for $key exceeded.")
         rejectResponse(request)
     }
   }
@@ -148,10 +157,10 @@ class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock =
   private def consumeAndCheck(key: Any, amount: Int, check: Int => Boolean): Future[Boolean] = {
     TokenBucketGroup.consume(tbActorRef, key, amount).map { remaining =>
       if (check(remaining)) {
-        if (remaining < size.toFloat / 2) logger.warn(s"$logPrefix remaining tokens for $key below 50%: $remaining")
+        if (remaining < size.toFloat / 2) logger.info(s"$logPrefix remaining tokens for $key below 50%: $remaining")
         true
       } else {
-        logger.error(s"$logPrefix rate limit for $key exceeded")
+        logger.warn(s"$logPrefix rate limit for $key exceeded")
         false
       }
     } recover {

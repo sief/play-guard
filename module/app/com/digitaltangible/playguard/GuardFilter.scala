@@ -130,8 +130,8 @@ class GuardFilter @Inject()(@Named("ip") ipTokenBucketGroupProvider: TokenBucket
   }
 
   private def logBucketLevel(prefix: String, remaining: Int, bucketSize: Int): Unit = {
-    if (remaining < 0) logger.error(s"$prefix rate limit exceeded")
-    else if (remaining < bucketSize.toFloat / 2) logger.warn(s"$prefix rate limit below 50%: $remaining")
+    if (remaining < 0) logger.warn(s"$prefix rate limit exceeded")
+    else if (remaining < bucketSize.toFloat / 2) logger.info(s"$prefix rate limit below 50%: $remaining")
     else logger.debug(s"$prefix bucket level: $remaining")
   }
 }
