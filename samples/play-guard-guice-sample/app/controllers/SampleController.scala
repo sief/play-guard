@@ -53,4 +53,5 @@ class SampleController @Inject()(implicit system: ActorSystem, conf: Configurati
 
       if (fail) BadRequest("failed")
       else Ok("Ok")
-    }}
+    }
+}
