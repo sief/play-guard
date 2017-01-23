@@ -135,16 +135,16 @@ There is a general ActionFilter for handling any type of request so you can chai
 
 ```scala
 /**
-  * ActionFilter which holds a RateLimiter with a bucket for each key returned by function f.
+  * ActionFilter which holds a RateLimiter with a bucket for each key returned by function keyFromRequest.
   * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
   *
-  * @param rl
+  * @param RateLimiter
   * @param rejectResponse
-  * @param f
+  * @param keyFromRequest
   * @tparam R
   * @return
   */
-class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, f: R[_] => Any) extends ActionFilter[R]
+class RateLimitActionFilter[R[_] <: Request[_]](RateLimiter: RateLimiter)(rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any) extends ActionFilter[R]
 ```
 
 There are also two convenience actions which provide the same functionality as in previous versions:
@@ -184,13 +184,13 @@ There is a general ActionFunction for handling any type of request so you can ch
   * Tokens are consumed only by failures determined by function resultCheck. If no tokens remain, requests with this key are rejected.
   * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
   *
-  * @param rl
+  * @param RateLimiter
   * @param rejectResponse
   * @param keyFromRequest
   * @param resultCheck
   * @tparam R
   */
-class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R]```
+class FailureRateLimitFunction[R[_] <: Request[_]](rateLimiter: RateLimiter)(rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R]
 ```
 
 The convenience action HttpErrorRateLimitAction limits the HTTP error rate for each IP address. This is for example useful if you want to prevent brute force bot attacks on authentication requests.
