@@ -149,7 +149,7 @@ class RateLimitActionFilter[R[_] <: Request[_]](rateLimiter: RateLimiter)(reject
 
 There are also two convenience actions which provide the same functionality as in previous versions:
 
-IP address as key (from the sample app):
+__IP address as key__ (from the sample app):
 
 ```scala
   // allow 3 requests immediately and get a new token every 5 seconds
@@ -162,7 +162,7 @@ IP address as key (from the sample app):
   }
 ```
 
-Action parameter as key (from the sample app):
+__Action parameter as key__ (from the sample app):
 
 ```scala
   // allow 4 requests immediately and get a new token every 15 seconds
@@ -193,7 +193,7 @@ There is a general ActionFunction for handling any type of request so you can ch
 class FailureRateLimitFunction[R[_] <: Request[_]](rateLimiter: RateLimiter)(rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R]
 ```
 
-The convenience action HttpErrorRateLimitAction limits the HTTP error rate for each IP address. This is for example useful if you want to prevent brute force bot attacks on authentication requests.
+The convenience action HttpErrorRateLimitAction __limits the HTTP error rate for each IP address__. This is for example useful if you want to prevent brute force bot attacks on authentication requests.
 
 From the sample app:
 
