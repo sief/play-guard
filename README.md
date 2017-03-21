@@ -1,5 +1,5 @@
-Play2 Guard Module
-==========
+# Play2 Guard Module
+
 
 Play2 module for blocking and throttling abusive requests.
 
@@ -8,18 +8,16 @@ Play2 module for blocking and throttling abusive requests.
 - throttling specific Actions based on IP address or other request attribute
 - throttling specific Actions based on IP address or other request attribute and failure rate, e.g. wrong credentials or any other Result attribute
 
-Target
-----------
+## Target
 
 This module targets the __Scala__ version of __Play 2.5.x__
 
-Rate Limit Algorithm
-----------
+## Rate Limit Algorithm
+
 Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 
 
-Getting play-guard
-----------
+## Getting play-guard
 
 The current stable version is 2.0.0
 
@@ -31,8 +29,8 @@ Add the following dependency to your build file:
   "com.digitaltangible" %% "play-guard" % "2.0.0"
 ```
 
-1. GuardFilter
-==========
+# 1. GuardFilter
+
 
 Filter for global rate limiting and IP address whitelisting/blacklisting.
 
@@ -113,8 +111,7 @@ The filter uses the black/whitelists from the configuration by default. You can 
 
 
 
-2. RateLimitAction
-==========
+# 2. RateLimitAction
 
 Action function/filter for request and failure rate limiting specific actions. You can derive the bucket key from the request.
 
