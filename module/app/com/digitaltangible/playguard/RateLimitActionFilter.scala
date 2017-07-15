@@ -4,11 +4,10 @@ import java.util.NoSuchElementException
 
 import akka.actor.ActorSystem
 import com.digitaltangible.tokenbucket.{Clock, CurrentTimeClock, TokenBucketGroup}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.{ActionBuilder, _}
 import play.api.{Configuration, Logger}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 
@@ -23,8 +22,10 @@ object KeyRateLimitAction {
     * @param rejectResponse
     * @return
     */
-  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result, key: Any): RateLimitActionFilter[Request] with ActionBuilder[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse, _ => key) with ActionBuilder[Request]
+  def apply[A](rl: RateLimiter)(rejectResponse: Request[_] => Result, key: Any, bodyParser: BodyParser[A], ec: ExecutionContext): RateLimitActionFilter[Request] with ActionBuilder[Request, A] =
+    new RateLimitActionFilter[Request](rl)(rejectResponse, _ => key, ec) with ActionBuilder[Request, A] {
+      override def parser: BodyParser[A] = bodyParser
+    }
 }
 
 
@@ -39,8 +40,10 @@ object IpRateLimitAction {
     * @param rejectResponse
     * @return
     */
-  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration): RateLimitActionFilter[Request] with ActionBuilder[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse, clientIp) with ActionBuilder[Request]
+  def apply[A](rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration, bodyParser: BodyParser[A], ec: ExecutionContext): RateLimitActionFilter[Request] with ActionBuilder[Request, A] =
+    new RateLimitActionFilter[Request](rl)(rejectResponse, clientIp, ec) with ActionBuilder[Request, A] {
+      override def parser: BodyParser[A] = bodyParser
+    }
 }
 
 
@@ -54,7 +57,7 @@ object IpRateLimitAction {
   * @tparam R
   * @return
   */
-class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, f: R[_] => Any) extends ActionFilter[R] {
+class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(implicit rejectResponse: R[_] => Result, f: R[_] => Any, ec: ExecutionContext) extends ActionFilter[R] {
 
   private val logger = Logger(this.getClass)
 
@@ -68,6 +71,8 @@ class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse:
       }
     }
   }
+
+  override protected def executionContext: ExecutionContext = ec
 }
 
 
@@ -83,10 +88,12 @@ object HttpErrorRateLimitAction {
     * @param conf
     * @return
     */
-  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result,
-                             errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration) =
+  def apply[A](rl: RateLimiter)(rejectResponse: Request[_] => Result,
+                                errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration, ec: ExecutionContext, bodyParser: BodyParser[A]) =
 
-    new FailureRateLimitFunction[Request](rl)(rejectResponse, clientIp, r => !(errorCodes contains r.header.status)) with ActionBuilder[Request]
+    new FailureRateLimitFunction[Request](rl)(rejectResponse, clientIp, r => !(errorCodes contains r.header.status), ec) with ActionBuilder[Request, A] {
+      override def parser: BodyParser[A] = bodyParser
+    }
 }
 
 /**
@@ -100,7 +107,7 @@ object HttpErrorRateLimitAction {
   * @param resultCheck
   * @tparam R
   */
-class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any, resultCheck: Result => Boolean) extends ActionFunction[R, R] {
+class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(implicit rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any, resultCheck: Result => Boolean, ec: ExecutionContext) extends ActionFunction[R, R] {
 
   private val logger = Logger(this.getClass)
 
@@ -119,6 +126,8 @@ class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(rejectRespon
         rejectResponse(request)
     }
   }
+
+  override protected def executionContext: ExecutionContext = ec
 }
 
 /**
@@ -130,7 +139,7 @@ class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(rejectRespon
   * @param clock
   * @param system
   */
-class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock)(implicit system: ActorSystem) {
+class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock)(implicit system: ActorSystem, ec: ExecutionContext) {
 
   private val logger = Logger(this.getClass)
 

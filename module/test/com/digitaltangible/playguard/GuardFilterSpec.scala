@@ -6,17 +6,18 @@ import com.digitaltangible.FakeClock
 import com.digitaltangible.tokenbucket.{Clock, CurrentTimeClock, TokenBucketGroup}
 import com.typesafe.config.ConfigFactory
 import org.scalatestplus.play._
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api
 import play.api.ApplicationLoader.Context
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Results._
-import play.api.mvc.{Action, AnyContentAsEmpty}
+import play.api.mvc.{Action, AnyContentAsEmpty, EssentialFilter}
 import play.api.routing.Router
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 
-class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
+class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
 
   override implicit lazy val app: api.Application = {
     val appLoader = new FakeAppLoader
@@ -35,6 +36,8 @@ class GuardFilterSpec extends PlaySpec with OneAppPerSuite {
       val testConfig = ConfigFactory.load("test.conf")
       Configuration(testConfig)
     }
+
+    override def httpFilters: Seq[EssentialFilter] = Seq()
   }
 
   implicit lazy val materializer: Materializer = app.materializer

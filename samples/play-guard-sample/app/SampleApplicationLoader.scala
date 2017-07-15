@@ -1,5 +1,5 @@
 import com.digitaltangible.playguard._
-import controllers.{Assets, SampleController}
+import controllers.{AssetsComponents, SampleController}
 import play.api.ApplicationLoader.Context
 import play.api._
 import play.api.mvc.EssentialFilter
@@ -15,10 +15,9 @@ class SampleApplicationLoader extends ApplicationLoader {
   }
 }
 
-class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context) with PlayGuardComponents {
+class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context) with PlayGuardComponents with AssetsComponents {
 
-  lazy val controller = new SampleController()(actorSystem, configuration)
-  lazy val assets = new Assets(httpErrorHandler)
+  lazy val controller = new SampleController()(actorSystem, configuration, executionContext, playBodyParsers)
   lazy val router = new Routes(httpErrorHandler, controller, assets)
 
   override lazy val httpFilters: Seq[EssentialFilter] = Seq(guardFilter)
