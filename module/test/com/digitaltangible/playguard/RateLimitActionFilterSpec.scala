@@ -1,13 +1,10 @@
 package com.digitaltangible.playguard
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
 import com.digitaltangible.FakeClock
 import org.scalatest.MustMatchers
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import org.scalatestplus.play.PlaySpec
-import play.api.Configuration
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.test.FakeRequest
@@ -18,16 +15,17 @@ import scala.concurrent.ExecutionContext
 
 class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with ScalaFutures with MustMatchers {
 
-  implicit lazy val system: ActorSystem = app.actorSystem
+  implicit lazy val system = app.actorSystem
 
-  implicit lazy val materializer: Materializer = app.materializer
+  implicit lazy val materializer = app.materializer
 
-  implicit lazy val conf: Configuration = app.configuration
+  implicit lazy val conf = app.configuration
 
   implicit lazy val ec = app.injector.instanceOf[ExecutionContext]
 
-  implicit lazy val bodyParsers = app.injector.instanceOf[PlayBodyParsers]
+  lazy val bodyParsers = app.injector.instanceOf[PlayBodyParsers]
 
+  lazy val actionBuilder: DefaultActionBuilder = DefaultActionBuilder(bodyParsers.anyContent)
 
   "RateLimiter" should {
     "consumeAndCheck for rate limiting" in {
@@ -67,9 +65,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with S
       val rl = new RateLimiter(2, 2, "test", fakeClock)
       val rejectResponse = (_: Request[_]) => TooManyRequests("test")
 
-      val action: EssentialAction = (new RateLimitActionFilter[Request](rl)(rejectResponse, _ => "key", ec) with ActionBuilder[Request, AnyContent] {
-        override def parser: BodyParser[AnyContent] = bodyParsers.anyContent
-      }) {
+      val action = (actionBuilder andThen new RateLimitActionFilter[Request](rl)(rejectResponse, _ => "key")) {
         Ok("ok")
       }
       val request = FakeRequest(GET, "/")
@@ -92,9 +88,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with S
       val rl = new RateLimiter(2, 2, "test", fakeClock)
       val failFunc = (r: Result) => r.header.status == OK
 
-      val action: EssentialAction = (new FailureRateLimitFunction[Request](rl)(_ => BadRequest, _ => "key", failFunc, ec) with ActionBuilder[Request, AnyContent] {
-        override def parser: BodyParser[AnyContent] = bodyParsers.anyContent
-      }) { request =>
+      val action = (actionBuilder andThen new FailureRateLimitFunction[Request](rl)(_ => BadRequest, _ => "key", failFunc)) { request =>
         if (request.path == "/") Ok
         else BadRequest
       }
@@ -121,13 +115,13 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with S
     }
   }
 
-  "HttpErrorRateLimitAction" should {
+  "HttpErrorRateLimitFunction" should {
     "limit failure rate" in {
 
       val fakeClock = new FakeClock
       val rl = new RateLimiter(1, 2, "test", fakeClock)
 
-      val action = HttpErrorRateLimitAction(rl)(_ => BadRequest, Seq(UNAUTHORIZED))(conf, ec, bodyParsers.default) { request: RequestHeader =>
+      val action = (actionBuilder andThen HttpErrorRateLimitFunction(rl)(_ => BadRequest, Seq(UNAUTHORIZED))) { request: RequestHeader =>
         if (request.path == "/") Ok
         else Unauthorized
       }

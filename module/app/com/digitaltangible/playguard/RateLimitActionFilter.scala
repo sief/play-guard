@@ -4,17 +4,17 @@ import java.util.NoSuchElementException
 
 import akka.actor.ActorSystem
 import com.digitaltangible.tokenbucket.{Clock, CurrentTimeClock, TokenBucketGroup}
-import play.api.mvc.{ActionBuilder, _}
+import play.api.mvc._
 import play.api.{Configuration, Logger}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 
-object KeyRateLimitAction {
+object KeyRateLimitFilter {
 
   /**
-    * Creates an ActionBuilder which holds a RateLimiter with a bucket for each key.
+    * Creates an ActionFilter which holds a RateLimiter with a bucket for each key.
     * Every request consumes a token. If no tokens remain, the request is rejected.
     *
     * @param rl
@@ -22,17 +22,15 @@ object KeyRateLimitAction {
     * @param rejectResponse
     * @return
     */
-  def apply[A](rl: RateLimiter)(rejectResponse: Request[_] => Result, key: Any, bodyParser: BodyParser[A], ec: ExecutionContext): RateLimitActionFilter[Request] with ActionBuilder[Request, A] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse, _ => key, ec) with ActionBuilder[Request, A] {
-      override def parser: BodyParser[A] = bodyParser
-    }
+  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result, key: Any)(implicit ec: ExecutionContext): RateLimitActionFilter[Request] =
+    new RateLimitActionFilter[Request](rl)(rejectResponse, _ => key)
 }
 
 
-object IpRateLimitAction {
+object IpRateLimitFilter {
 
   /**
-    * Creates an ActionBuilder which holds a RateLimiter with a bucket for each IP address.
+    * Creates an ActionFilter which holds a RateLimiter with a bucket for each IP address.
     * Every request consumes a token. If no tokens remain, the request is rejected.
     *
     * @param conf
@@ -40,10 +38,8 @@ object IpRateLimitAction {
     * @param rejectResponse
     * @return
     */
-  def apply[A](rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration, bodyParser: BodyParser[A], ec: ExecutionContext): RateLimitActionFilter[Request] with ActionBuilder[Request, A] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse, clientIp, ec) with ActionBuilder[Request, A] {
-      override def parser: BodyParser[A] = bodyParser
-    }
+  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration, ec: ExecutionContext): RateLimitActionFilter[Request] =
+    new RateLimitActionFilter[Request](rl)(rejectResponse, clientIp)
 }
 
 
@@ -57,7 +53,7 @@ object IpRateLimitAction {
   * @tparam R
   * @return
   */
-class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(implicit rejectResponse: R[_] => Result, f: R[_] => Any, ec: ExecutionContext) extends ActionFilter[R] {
+class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, f: R[_] => Any)(implicit val executionContext: ExecutionContext) extends ActionFilter[R] {
 
   private val logger = Logger(this.getClass)
 
@@ -71,29 +67,26 @@ class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(implicit reject
       }
     }
   }
-
-  override protected def executionContext: ExecutionContext = ec
 }
 
 
-object HttpErrorRateLimitAction {
+object HttpErrorRateLimitFunction {
 
   /**
-    * Creates an Action which holds a RateLimiter with a bucket for each IP address.
+    * Creates an ActionFunction which holds a RateLimiter with a bucket for each IP address.
     * Tokens are consumed only by failures determined by HTTP error codes. If no tokens remain, the request is rejected.
     *
     * @param rl
     * @param rejectResponse
     * @param errorCodes
     * @param conf
+    * @param ec
     * @return
     */
-  def apply[A](rl: RateLimiter)(rejectResponse: Request[_] => Result,
-                                errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration, ec: ExecutionContext, bodyParser: BodyParser[A]) =
+  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result,
+                             errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration, ec: ExecutionContext) =
 
-    new FailureRateLimitFunction[Request](rl)(rejectResponse, clientIp, r => !(errorCodes contains r.header.status), ec) with ActionBuilder[Request, A] {
-      override def parser: BodyParser[A] = bodyParser
-    }
+    new FailureRateLimitFunction[Request](rl)(rejectResponse, clientIp, r => !(errorCodes contains r.header.status))
 }
 
 /**
@@ -105,9 +98,10 @@ object HttpErrorRateLimitAction {
   * @param rejectResponse
   * @param keyFromRequest
   * @param resultCheck
+  * @param executionContext
   * @tparam R
   */
-class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(implicit rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any, resultCheck: Result => Boolean, ec: ExecutionContext) extends ActionFunction[R, R] {
+class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, keyFromRequest: R[_] => Any, resultCheck: Result => Boolean)(implicit val executionContext: ExecutionContext) extends ActionFunction[R, R] {
 
   private val logger = Logger(this.getClass)
 
@@ -126,8 +120,6 @@ class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(implicit rej
         rejectResponse(request)
     }
   }
-
-  override protected def executionContext: ExecutionContext = ec
 }
 
 /**

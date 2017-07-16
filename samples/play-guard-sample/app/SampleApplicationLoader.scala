@@ -17,7 +17,7 @@ class SampleApplicationLoader extends ApplicationLoader {
 
 class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context) with PlayGuardComponents with AssetsComponents {
 
-  lazy val controller = new SampleController()(actorSystem, configuration, executionContext, playBodyParsers)
+  lazy val controller = new SampleController(controllerComponents)(actorSystem, executionContext, configuration)
   lazy val router = new Routes(httpErrorHandler, controller, assets)
 
   override lazy val httpFilters: Seq[EssentialFilter] = Seq(guardFilter)
