@@ -10,7 +10,7 @@ Play2 module for blocking and throttling abusive requests.
 
 ## Target
 
-This module targets the __Scala__ version of __Play 2.6.x__
+This module targets the __Scala__ version of __Play 2.5.x__
 
 ## Rate Limit Algorithm
 
@@ -19,9 +19,8 @@ Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 
 ## Getting play-guard
 
-The current stable version is 3.0.0
+The current stable version is 2.0.0
 
-(For Play 2.5.x you can use version 2.1.0 which is cross-built against Scala 2.10.x and 2.11.x.)
 (For Play 2.4.x you can use version 1.6.0 which is cross-built against Scala 2.10.x and 2.11.x.)
 
 Add the following dependency to your build file:
