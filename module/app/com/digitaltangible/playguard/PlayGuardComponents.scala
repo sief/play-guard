@@ -4,6 +4,8 @@ import akka.actor.ActorSystem
 import play.api.inject.Module
 import play.api.{Configuration, Environment}
 
+import scala.concurrent.ExecutionContext
+
 
 // for compile-time DI
 trait PlayGuardComponents {
@@ -12,8 +14,10 @@ trait PlayGuardComponents {
 
   implicit def actorSystem: ActorSystem
 
-  lazy val ipTokenBucketGroupProvider = new DefaultIpTokenBucketGroupProvider(configuration, actorSystem)
-  lazy val globalTokenBucketGroupProvider = new DefaultGlobalTokenBucketGroupProvider(configuration, actorSystem)
+  implicit def executionContext: ExecutionContext
+
+  lazy val ipTokenBucketGroupProvider = new DefaultIpTokenBucketGroupProvider(configuration, actorSystem, executionContext)
+  lazy val globalTokenBucketGroupProvider = new DefaultGlobalTokenBucketGroupProvider(configuration, actorSystem, executionContext)
   lazy val ipChecker = new DefaultIpChecker(configuration)
 
   lazy val guardFilter = new GuardFilter(

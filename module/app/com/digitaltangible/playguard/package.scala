@@ -7,7 +7,7 @@ package object playguard {
 
   def clientIp(request: RequestHeader)(implicit conf: Configuration): String = {
     (for {
-      configuredHeader <- conf.getOptional[String]("playguard.clientipheader")
+      configuredHeader <- conf.get[Option[String]]("playguard.clientipheader")
       ip <- request.headers.get(configuredHeader)
     } yield ip) getOrElse {
 

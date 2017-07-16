@@ -6,7 +6,6 @@ import javax.inject.{Inject, Named, Singleton}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.ActorMaterializer
 import com.digitaltangible.tokenbucket.TokenBucketGroup
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.streams.Accumulator
 import play.api.libs.streams.Accumulator._
 import play.api.mvc.Results._
@@ -25,8 +24,8 @@ trait IpChecker {
 @Singleton
 class DefaultIpChecker @Inject()(conf: Configuration) extends IpChecker {
 
-  private lazy val IpWhitelist = conf.getStringSeq("playguard.filter.ip.whitelist").map(_.toSet).getOrElse(Set.empty)
-  private lazy val IpBlacklist = conf.getStringSeq("playguard.filter.ip.blacklist").map(_.toSet).getOrElse(Set.empty)
+  private lazy val IpWhitelist = conf.get[Option[Seq[String]]]("playguard.filter.ip.whitelist").map(_.toSet).getOrElse(Set.empty)
+  private lazy val IpBlacklist = conf.get[Option[Seq[String]]]("playguard.filter.ip.blacklist").map(_.toSet).getOrElse(Set.empty)
 
 
   override def isWhitelisted(ip: String): Boolean = IpWhitelist.contains(ip)
@@ -44,21 +43,20 @@ trait TokenBucketGroupProvider {
 trait DefaultTokenBucketGroupProvider extends TokenBucketGroupProvider {
   protected val conf: Configuration
   implicit protected val system: ActorSystem
+  implicit protected val ec: ExecutionContext
   lazy val tbActorRef: ActorRef = TokenBucketGroup.create(tokenBucketSize, tokenBucketRate)
-
-  protected def requiredConfInt(key: String): Int = conf.getInt(key).getOrElse(sys.error(s"missing or invalid config value: $key"))
 }
 
 @Singleton
-class DefaultIpTokenBucketGroupProvider @Inject()(val conf: Configuration, val system: ActorSystem) extends DefaultTokenBucketGroupProvider {
-  lazy val tokenBucketSize: Int = requiredConfInt("playguard.filter.ip.bucket.size")
-  lazy val tokenBucketRate: Int = requiredConfInt("playguard.filter.ip.bucket.rate")
+class DefaultIpTokenBucketGroupProvider @Inject()(val conf: Configuration, val system: ActorSystem, val ec: ExecutionContext) extends DefaultTokenBucketGroupProvider {
+  lazy val tokenBucketSize: Int = conf.get[Int]("playguard.filter.ip.bucket.size")
+  lazy val tokenBucketRate: Int = conf.get[Int]("playguard.filter.ip.bucket.rate")
 }
 
 @Singleton
-class DefaultGlobalTokenBucketGroupProvider @Inject()(val conf: Configuration, val system: ActorSystem) extends DefaultTokenBucketGroupProvider {
-  lazy val tokenBucketSize: Int = requiredConfInt("playguard.filter.global.bucket.size")
-  lazy val tokenBucketRate: Int = requiredConfInt("playguard.filter.global.bucket.rate")
+class DefaultGlobalTokenBucketGroupProvider @Inject()(val conf: Configuration, val system: ActorSystem, val ec: ExecutionContext) extends DefaultTokenBucketGroupProvider {
+  lazy val tokenBucketSize: Int = conf.get[Int]("playguard.filter.global.bucket.size")
+  lazy val tokenBucketRate: Int = conf.get[Int]("playguard.filter.global.bucket.rate")
 }
 
 /**
@@ -75,13 +73,13 @@ class DefaultGlobalTokenBucketGroupProvider @Inject()(val conf: Configuration, v
 @Singleton
 class GuardFilter @Inject()(@Named("ip") ipTokenBucketGroupProvider: TokenBucketGroupProvider,
                             @Named("global") globalTokenBucketGroupProvider: TokenBucketGroupProvider,
-                            ipListChecker: IpChecker)(implicit system: ActorSystem, conf: Configuration) extends EssentialFilter {
+                            ipListChecker: IpChecker)(implicit system: ActorSystem, ec: ExecutionContext, conf: Configuration) extends EssentialFilter {
 
   private val logger = Logger(this.getClass)
 
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  private lazy val Enabled = conf.getBoolean("playguard.filter.enabled").getOrElse(false)
+  private lazy val Enabled = conf.get[Boolean]("playguard.filter.enabled")
 
   def apply(next: EssentialAction) = EssentialAction { implicit request: RequestHeader =>
     lazy val ip = clientIp(request)
