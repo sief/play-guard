@@ -4,7 +4,10 @@ organization := """com.digitaltangible"""
 
 version := "2.1.0-SNAPSHOT"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.2"
+
+crossScalaVersions := Seq("2.12.2", "2.11.8")
+
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
@@ -14,9 +17,9 @@ scalacOptions ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.12.6" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % "2.4.16" % "test"
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.0" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.3" % "test"
 )
 
 
