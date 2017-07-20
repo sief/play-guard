@@ -36,6 +36,15 @@ For Play 2.4.x:
   "com.digitaltangible" %% "play-guard" % "1.6.0"
 ```
 
+
+For Play 2.3.x:
+```scala
+  "com.digitaltangible" %% "play-guard" % "1.4.1"
+```
+
+
+
+
 # 1. GuardFilter
 
 
