@@ -51,6 +51,7 @@ object IpRateLimitFilter {
   * @param rejectResponse
   * @param f
   * @tparam R
+  * @param executionContext
   * @return
   */
 class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, f: R[_] => Any)(implicit val executionContext: ExecutionContext) extends ActionFilter[R] {
