@@ -46,8 +46,6 @@ For Play 2.3.x:
 
 
 
-
-
 # 1. RateLimitAction
 
 Action function/filter for request and failure rate limiting specific actions. You can derive the bucket key from the request.
@@ -144,6 +142,15 @@ From the sample app:
     else Ok("Ok")
   }
 ```
+
+1.3 Integration with Silhouette
+-------
+
+https://www.silhouette.rocks/docs/rate-limiting
+
+
+
+
 
 # 2. GuardFilter
 
