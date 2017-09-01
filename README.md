@@ -190,7 +190,19 @@ class Filters @Inject()(env: Environment, guardFilter: GuardFilter) extends Defa
 ```
 
 
-Requires configuration in your application.conf.
+The filter uses the black/whitelists from the configuration by default. You can also plug in you own IpChecker implementation. With runtime time DI you have to disable the default module in your application.conf and bind your implementation in your app's module:
+
+ ```
+ play {
+   modules {
+     disabled += "com.digitaltangible.playguard.PlayGuardIpCheckerModule"
+   }
+ }
+ ```
+
+
+# 3. Configuration
+
 
 __Note: the config format has changed with v2.0.0__
 
@@ -202,6 +214,8 @@ playguard {
   # If not set, RequestHeader.remoteAddress will be used
   clientipheader = "X-Forwarded-For"
 
+
+  # required for the global GuardFilter
   filter {
     enabled = true
     global {
@@ -222,13 +236,4 @@ playguard {
 }
 ```
 
-The filter uses the black/whitelists from the configuration by default. You can also plug in you own IpChecker implementation. With runtime time DI you have to disable the default module in your application.conf and bind your implementation in your app's module:
-
- ```
- play {
-   modules {
-     disabled += "com.digitaltangible.playguard.PlayGuardIpCheckerModule"
-   }
- }
- ```
 
