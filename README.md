@@ -3,10 +3,11 @@
 
 Play2 module for blocking and throttling abusive requests.
 
-- IP address whitelisting/blacklisting
-- general request throttling
 - throttling specific Actions based on IP address or other request attribute
 - throttling specific Actions based on IP address or other request attribute and failure rate, e.g. wrong credentials or any other Result attribute
+
+- global IP address whitelisting/blacklisting
+- global request throttling
 
 ## Target
 
