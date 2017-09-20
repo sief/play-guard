@@ -1,5 +1,10 @@
 # Play2 Guard Module
 
+[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.10.svg?label=latest%20release%20for%202.10)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.10)
+[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.11.svg?label=latest%20release%20for%202.11)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.11)
+[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.12.svg?label=latest%20release%20for%202.12)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.12)
+
+
 
 Play2 module for blocking and throttling abusive requests.
 
