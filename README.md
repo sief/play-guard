@@ -215,12 +215,6 @@ __Note: the config format has changed with v2.0.0__
 
 ```
 playguard {
-
-  # the http header to use for the client IP address.
-  # If not set, RequestHeader.remoteAddress will be used
-  clientipheader = "X-Forwarded-For"
-
-
   # required for the global GuardFilter
   filter {
     enabled = true
@@ -239,7 +233,17 @@ playguard {
       }
     }
   }
+
+  # deprecated, see 3.1 below
+  # clientipheader = "X-Client-Ip"
 }
 ```
 
+3.1 Configuring the remote IP address
+-------------------------------------
 
+By default, IP-based rate limits will use `RequestHeaders.remoteAddress` as the address of the client. Depending on [how you have configured Play](https://www.playframework.com/documentation/2.6.x/HTTPServer#Configuring-trusted-proxies) this may be the actual remote address of clients connecting directly, or it may be read from the common `X-Forwarded-For` or `Forwarded` headers that are set by proxies and load balancers.
+
+If you are using a reverse proxy (e.g. [nginx](https://www.nginx.com/resources/wiki/start/topics/examples/forwarded/), HAProxy or an [AWS ELB](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/x-forwarded-headers.html)) in front of your application, you should take care to configure the [`play.http.forwarded.trustedProxies`](https://www.playframework.com/documentation/2.6.x/HTTPServer#Configuring-trusted-proxies) setting, otherwise all requests will be rate-limited against the IP address of the upstream proxy (definitely not what you want).
+
+Guard also supports a `clientipheader` configuration parameter, which is the name of a header to read to find the client IP address. However, no "trusted proxies" processing is done on this value (it's expected to contain a single IP value), so this cannot be used to safely read `X-Forwarded-For` nor `Forwarded` headers. So, for most cases, this should be left unconfigured.
