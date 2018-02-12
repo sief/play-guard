@@ -82,12 +82,19 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
       runFake("0.0.0.4", filter) mustEqual TOO_MANY_REQUESTS
       runFake("2.2.2.2", filter) mustEqual OK
     }
+
+    "ignore spoofed X-Forwarded-For header by default" in {
+      val fakeClock = new FakeClock
+      val filter = testFilter(fakeClock)
+      runFake("0.0.0.0", filter, FakeHeaders(List("X-Forwarded-For" -> "3.3.3.3"))) mustEqual OK
+      runFake("3.3.3.3", filter, FakeHeaders(List("X-Forwarded-For" -> "0.0.0.0"))) mustEqual FORBIDDEN
+    }
   }
 
-  private def runFake(ip: String, filter: GuardFilter): Int = {
+  private def runFake(ip: String, filter: GuardFilter, headers: FakeHeaders = FakeHeaders()): Int = {
     val bodyParsers = app.injector.instanceOf[PlayBodyParsers]
     val actionBuilder: DefaultActionBuilder = DefaultActionBuilder(bodyParsers.anyContent)
-    val rh = FakeRequest("GET", "/", FakeHeaders(), AnyContentAsEmpty, ip)
+    val rh = FakeRequest("GET", "/", headers, AnyContentAsEmpty, ip)
     val action = actionBuilder(Ok("success"))
     val result = filter(action)(rh).run()
     status(result)
