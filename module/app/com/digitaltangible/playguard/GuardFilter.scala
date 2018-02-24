@@ -82,7 +82,7 @@ class GuardFilter @Inject()(@Named("ip") ipTokenBucketGroupProvider: TokenBucket
   private lazy val Enabled = conf.get[Boolean]("playguard.filter.enabled")
 
   def apply(next: EssentialAction) = EssentialAction { implicit request: RequestHeader =>
-    lazy val ip = clientIp(request)
+    lazy val ip = request.remoteAddress
     if (!Enabled) next(request)
     else if (ipListChecker.isWhitelisted(ip)) next(request)
     else if (ipListChecker.isBlacklisted(ip)) done(Forbidden("IP address blocked"))

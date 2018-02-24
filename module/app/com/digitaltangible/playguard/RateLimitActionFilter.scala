@@ -39,7 +39,7 @@ object IpRateLimitFilter {
     * @return
     */
   def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration, ec: ExecutionContext): RateLimitActionFilter[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse, clientIp)
+    new RateLimitActionFilter[Request](rl)(rejectResponse, _.remoteAddress)
 }
 
 
@@ -87,7 +87,7 @@ object HttpErrorRateLimitFunction {
   def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result,
                              errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration, ec: ExecutionContext) =
 
-    new FailureRateLimitFunction[Request](rl)(rejectResponse, clientIp, r => !(errorCodes contains r.header.status))
+    new FailureRateLimitFunction[Request](rl)(rejectResponse, _.remoteAddress, r => !(errorCodes contains r.header.status))
 }
 
 /**
