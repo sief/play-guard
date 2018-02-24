@@ -240,4 +240,6 @@ By default, IP-based rate limits will use `RequestHeader.remoteAddress` as the a
 
 If you are using a reverse proxy (e.g. [nginx](https://www.nginx.com/resources/wiki/start/topics/examples/forwarded/), HAProxy or an [AWS ELB](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/x-forwarded-headers.html)) in front of your application, you should take care to configure the [`play.http.forwarded.trustedProxies`](https://www.playframework.com/documentation/2.6.x/HTTPServer#Configuring-trusted-proxies) setting, otherwise all requests will be rate-limited against the IP address of the upstream proxy (definitely not what you want).
 
+For scenarios where you don't know your immediate connection's IP address beforehand (to configure it as a trusted proxy) but can still trust it, e.g. on Heroku, there is a custom RequestHandler `TrustedImmediateConnectionXForwardedForRequestHandler` which replaces the immediate connection with the last IP address in the X-Forwarded-For header, if available.
+
 __Note:__ the latest release 2.1.0 still checks the `X-Forwarded-For` header first and takes the last entry from the list. Only if there is no `X-Forwarded-For` header it will fall back to `RequestHeaders.remoteAddress`. 
