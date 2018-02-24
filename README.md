@@ -236,7 +236,7 @@ playguard {
 3.1 Configuring the remote IP address
 -------------------------------------
 
-By default, IP-based rate limits will use `RequestHeader.remoteAddress` as the address of the client. Depending on [how you have configured Play](https://www.playframework.com/documentation/2.6.x/HTTPServer#Configuring-trusted-proxies) this may be the actual remote address of clients connecting directly, or it may be read from the common `X-Forwarded-For` or `Forwarded` headers that are set by proxies and load balancers.
+IP-based rate limits will use `RequestHeader.remoteAddress` as the address of the client. Depending on [how you have configured Play](https://www.playframework.com/documentation/2.6.x/HTTPServer#Configuring-trusted-proxies) this may be the actual remote address of clients connecting directly, or it may be read from the common `X-Forwarded-For` or `Forwarded` headers that are set by proxies and load balancers.
 
 If you are using a reverse proxy (e.g. [nginx](https://www.nginx.com/resources/wiki/start/topics/examples/forwarded/), HAProxy or an [AWS ELB](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/x-forwarded-headers.html)) in front of your application, you should take care to configure the [`play.http.forwarded.trustedProxies`](https://www.playframework.com/documentation/2.6.x/HTTPServer#Configuring-trusted-proxies) setting, otherwise all requests will be rate-limited against the IP address of the upstream proxy (definitely not what you want).
 
