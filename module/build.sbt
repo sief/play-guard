@@ -4,9 +4,9 @@ organization := """com.digitaltangible"""
 
 version := "2.2.0-SNAPSHOT"
 
-scalaVersion := "2.12.2"
+scalaVersion := "2.12.4"
 
-crossScalaVersions := Seq("2.12.2", "2.11.8")
+crossScalaVersions := Seq("2.12.4", "2.11.12")
 
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
@@ -17,12 +17,12 @@ scalacOptions ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.0" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % "2.5.3" % "test"
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.13.5" % "test",
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.9" % "test"
 )
 
-
+                                                      
 publishMavenStyle := true
 
 publishArtifact in Test := false

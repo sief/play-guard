@@ -5,7 +5,6 @@ import play.api._
 import play.api.mvc.EssentialFilter
 import router.Routes
 
-
 class SampleApplicationLoader extends ApplicationLoader {
   def load(context: Context): Application = {
     LoggerConfigurator(context.environment.classLoader).foreach {
@@ -15,10 +14,23 @@ class SampleApplicationLoader extends ApplicationLoader {
   }
 }
 
-class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context) with PlayGuardComponents with AssetsComponents {
+class ApplicationComponents(context: Context)
+    extends BuiltInComponentsFromContext(context)
+    with PlayGuardComponents
+    with AssetsComponents {
 
-  lazy val controller = new SampleController(controllerComponents)(actorSystem, executionContext, configuration)
+  lazy val controller = new SampleController(controllerComponents)(
+    actorSystem,
+    executionContext,
+    configuration)
+
   lazy val router = new Routes(httpErrorHandler, controller, assets)
 
   override lazy val httpFilters: Seq[EssentialFilter] = Seq(guardFilter)
+
+  override lazy val httpRequestHandler =
+    new TrustedImmediateConnectionXForwardedForRequestHandler(router,
+                                                              httpErrorHandler,
+                                                              httpConfiguration,
+                                                              httpFilters)
 }

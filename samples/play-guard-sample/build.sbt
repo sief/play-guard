@@ -4,7 +4,7 @@ version := "1.1-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.12.2"
+scalaVersion := "2.12.4"
 
 libraryDependencies ++= Seq(
   "com.digitaltangible" %% "play-guard" % "2.2.0-SNAPSHOT"
