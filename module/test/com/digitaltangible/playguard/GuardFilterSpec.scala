@@ -48,7 +48,7 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
       runFake("0.0.0.0", filter) mustEqual TOO_MANY_REQUESTS
       runFake("0.0.0.1", filter) mustEqual OK
       runFake("0.0.0.0", filter) mustEqual TOO_MANY_REQUESTS
-      fakeClock.ts = 501
+      fakeClock.ts = 501000000
       runFake("0.0.0.0", filter) mustEqual OK
     }
 
@@ -68,7 +68,7 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
       runFake("0.0.0.3", filter) mustEqual OK
       runFake("0.0.0.4", filter) mustEqual TOO_MANY_REQUESTS
       runFake("0.0.0.5", filter) mustEqual TOO_MANY_REQUESTS
-      fakeClock.ts = 401
+      fakeClock.ts = 401000000
       runFake("0.0.0.0", filter) mustEqual OK
       runFake("0.0.0.4", filter) mustEqual OK
     }

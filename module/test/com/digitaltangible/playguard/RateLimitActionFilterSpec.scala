@@ -33,7 +33,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       rateLimiter.consumeAndCheck("1") mustBe true
       rateLimiter.consumeAndCheck("1") mustBe false
       rateLimiter.consumeAndCheck("2") mustBe true
-      fakeClock.ts = 501
+      fakeClock.ts = 501000000
       rateLimiter.consumeAndCheck("1") mustBe true
       rateLimiter.consumeAndCheck("1") mustBe false
     }
@@ -48,7 +48,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       rateLimiter.check("1") mustBe true
       rateLimiter.consume("1") mustBe 0
       rateLimiter.check("1") mustBe false
-      fakeClock.ts = 501
+      fakeClock.ts = 501000000
       rateLimiter.check("1") mustBe true
       rateLimiter.consume("1") mustBe 0
       rateLimiter.check("1") mustBe false
@@ -74,7 +74,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       status(result) mustEqual OK
       result = call(action, request)
       status(result) mustEqual TOO_MANY_REQUESTS
-      fakeClock.ts = 501
+      fakeClock.ts = 501000000
       result = call(action, request)
       status(result) mustEqual OK
     }
@@ -109,7 +109,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       status(result) mustEqual BAD_REQUEST
       result = call(action, requestOk)
       status(result) mustEqual BAD_REQUEST
-      fakeClock.ts = 501
+      fakeClock.ts = 501000000
       result = call(action, requestOk)
       status(result) mustEqual OK
     }
@@ -136,7 +136,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       status(result) mustEqual UNAUTHORIZED
       result = call(action, requestOk)
       status(result) mustEqual BAD_REQUEST
-      fakeClock.ts = 501
+      fakeClock.ts = 501000000
       result = call(action, requestOk)
       status(result) mustEqual OK
     }

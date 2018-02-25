@@ -157,7 +157,7 @@ class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock =
    */
   def check(key: Any): Boolean = consumeAndCheck(key, 0, _ > 0)
 
-  private def consumeAndCheck(key: Any, amount: Int, check: Int => Boolean): Boolean = {
+  private def consumeAndCheck(key: Any, amount: Int, check: Long => Boolean): Boolean = {
     val remaining = tokenBucketGroup.consume(key, amount)
     if (check(remaining)) {
       if (remaining < size.toFloat / 2) logger.info(s"$logPrefix remaining tokens for $key below 50%: $remaining")
@@ -174,5 +174,5 @@ class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock =
    * @param key
    * @return
    */
-  def consume(key: Any): Int = tokenBucketGroup.consume(key, 1)
+  def consume(key: Any): Long = tokenBucketGroup.consume(key, 1)
 }

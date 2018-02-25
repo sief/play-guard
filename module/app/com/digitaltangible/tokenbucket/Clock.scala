@@ -8,5 +8,5 @@ trait Clock {
 }
 
 object CurrentTimeClock extends Clock {
-  override def now: Long = System.currentTimeMillis
+  override def now: Long = System.nanoTime()
 }
