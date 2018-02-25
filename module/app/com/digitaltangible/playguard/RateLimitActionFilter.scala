@@ -33,12 +33,11 @@ object IpRateLimitFilter {
     * Creates an ActionFilter which holds a RateLimiter with a bucket for each IP address.
     * Every request consumes a token. If no tokens remain, the request is rejected.
     *
-    * @param conf
     * @param rl
     * @param rejectResponse
     * @return
     */
-  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit conf: Configuration, ec: ExecutionContext): RateLimitActionFilter[Request] =
+  def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result)(implicit ec: ExecutionContext): RateLimitActionFilter[Request] =
     new RateLimitActionFilter[Request](rl)(rejectResponse, _.remoteAddress)
 }
 
@@ -80,12 +79,11 @@ object HttpErrorRateLimitFunction {
     * @param rl
     * @param rejectResponse
     * @param errorCodes
-    * @param conf
     * @param ec
     * @return
     */
   def apply(rl: RateLimiter)(rejectResponse: Request[_] => Result,
-                             errorCodes: Seq[Int] = 400 to 499)(implicit conf: Configuration, ec: ExecutionContext) =
+                             errorCodes: Seq[Int] = 400 to 499)(implicit ec: ExecutionContext) =
 
     new FailureRateLimitFunction[Request](rl)(rejectResponse, _.remoteAddress, r => !(errorCodes contains r.header.status))
 }
@@ -136,7 +134,7 @@ class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock =
 
   private val logger = Logger(this.getClass)
 
-  private lazy val tbActorRef = TokenBucketGroup.create(size, rate, clock)
+  private lazy val tokenBucketGroup = new TokenBucketGroup(size, rate, clock)
 
   /**
     * Checks if the bucket for the given key has at least one token left.
@@ -157,7 +155,7 @@ class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock =
 
 
   private def consumeAndCheck(key: Any, amount: Int, check: Int => Boolean): Future[Boolean] = {
-    TokenBucketGroup.consume(tbActorRef, key, amount).map { remaining =>
+    tokenBucketGroup.consume(key, amount).map { remaining =>
       if (check(remaining)) {
         if (remaining < size.toFloat / 2) logger.info(s"$logPrefix remaining tokens for $key below 50%: $remaining")
         true
@@ -178,5 +176,5 @@ class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock =
     * @param key
     * @return
     */
-  def consume(key: Any): Future[Int] = TokenBucketGroup.consume(tbActorRef, key, 1)
+  def consume(key: Any): Future[Int] = tokenBucketGroup.consume(key, 1)
 }

@@ -37,24 +37,22 @@ class DefaultIpChecker @Inject()(conf: Configuration) extends IpChecker {
 trait TokenBucketGroupProvider {
   val tokenBucketSize: Int
   val tokenBucketRate: Int
-  val tbActorRef: ActorRef
+  val tokenBucketGroup: TokenBucketGroup
 }
 
 trait DefaultTokenBucketGroupProvider extends TokenBucketGroupProvider {
   protected val conf: Configuration
-  implicit protected val system: ActorSystem
-  implicit protected val ec: ExecutionContext
-  lazy val tbActorRef: ActorRef = TokenBucketGroup.create(tokenBucketSize, tokenBucketRate)
+  lazy val tokenBucketGroup = new TokenBucketGroup(tokenBucketSize, tokenBucketRate)
 }
 
 @Singleton
-class DefaultIpTokenBucketGroupProvider @Inject()(val conf: Configuration, val system: ActorSystem, val ec: ExecutionContext) extends DefaultTokenBucketGroupProvider {
+class DefaultIpTokenBucketGroupProvider @Inject()(val conf: Configuration) extends DefaultTokenBucketGroupProvider {
   lazy val tokenBucketSize: Int = conf.get[Int]("playguard.filter.ip.bucket.size")
   lazy val tokenBucketRate: Int = conf.get[Int]("playguard.filter.ip.bucket.rate")
 }
 
 @Singleton
-class DefaultGlobalTokenBucketGroupProvider @Inject()(val conf: Configuration, val system: ActorSystem, val ec: ExecutionContext) extends DefaultTokenBucketGroupProvider {
+class DefaultGlobalTokenBucketGroupProvider @Inject()(val conf: Configuration) extends DefaultTokenBucketGroupProvider {
   lazy val tokenBucketSize: Int = conf.get[Int]("playguard.filter.global.bucket.size")
   lazy val tokenBucketRate: Int = conf.get[Int]("playguard.filter.global.bucket.rate")
 }
@@ -113,15 +111,15 @@ class GuardFilter @Inject()(@Named("ip") ipTokenBucketGroupProvider: TokenBucket
     }
   }
 
-  private def checkIpRate(ip: String): Future[Boolean] = {
-    TokenBucketGroup.consume(ipTokenBucketGroupProvider.tbActorRef, ip, 1).map { remaining =>
+  private def checkIpRate(ip: String) = {
+    ipTokenBucketGroupProvider.tokenBucketGroup.consume(ip, 1).map { remaining =>
       logBucketLevel(s"IP $ip", remaining, ipTokenBucketGroupProvider.tokenBucketSize)
       remaining >= 0
     }
   }
 
   private def checkGlobalRate() = {
-    TokenBucketGroup.consume(globalTokenBucketGroupProvider.tbActorRef, "G", 1).map { remaining =>
+    globalTokenBucketGroupProvider.tokenBucketGroup.consume("G", 1).map { remaining =>
       logBucketLevel("Global", remaining, globalTokenBucketGroupProvider.tokenBucketSize)
       remaining >= 0
     }

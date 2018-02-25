@@ -1,6 +1,6 @@
 package com.digitaltangible.playguard
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.digitaltangible.FakeClock
 import com.digitaltangible.tokenbucket.{Clock, CurrentTimeClock, TokenBucketGroup}
@@ -21,7 +21,7 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
 
   implicit lazy val actorSystem: ActorSystem = app.actorSystem
 
-  implicit lazy val executionContext = app.injector.instanceOf[ExecutionContext]
+  implicit lazy val executionContext: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   "GuardFilter" should {
 
@@ -105,13 +105,13 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
     implicit val testConfig = Configuration(ConfigFactory.load("test.conf"))
 
     new GuardFilter(
-      new DefaultIpTokenBucketGroupProvider(testConfig, app.actorSystem, executionContext) {
-        override lazy val tbActorRef: ActorRef = TokenBucketGroup.create(tokenBucketSize, tokenBucketRate, clock)
+      new DefaultIpTokenBucketGroupProvider(testConfig) {
+        override lazy val tokenBucketGroup = new TokenBucketGroup(tokenBucketSize, tokenBucketRate, clock)
       },
-      new DefaultGlobalTokenBucketGroupProvider(testConfig, app.actorSystem, executionContext) {
-        override lazy val tbActorRef: ActorRef = TokenBucketGroup.create(tokenBucketSize, tokenBucketRate, clock)
+      new DefaultGlobalTokenBucketGroupProvider(testConfig) {
+        override lazy val tokenBucketGroup = new TokenBucketGroup(tokenBucketSize, tokenBucketRate, clock)
       },
-      new DefaultIpChecker(testConfig))
+      new DefaultIpChecker(testConfig)
+    )
   }
 }
-

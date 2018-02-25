@@ -16,8 +16,8 @@ trait PlayGuardComponents {
 
   implicit def executionContext: ExecutionContext
 
-  lazy val ipTokenBucketGroupProvider = new DefaultIpTokenBucketGroupProvider(configuration, actorSystem, executionContext)
-  lazy val globalTokenBucketGroupProvider = new DefaultGlobalTokenBucketGroupProvider(configuration, actorSystem, executionContext)
+  lazy val ipTokenBucketGroupProvider = new DefaultIpTokenBucketGroupProvider(configuration)
+  lazy val globalTokenBucketGroupProvider = new DefaultGlobalTokenBucketGroupProvider(configuration)
   lazy val ipChecker = new DefaultIpChecker(configuration)
 
   lazy val guardFilter = new GuardFilter(
