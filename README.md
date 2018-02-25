@@ -242,4 +242,4 @@ If you are using a reverse proxy (e.g. [nginx](https://www.nginx.com/resources/w
 
 For scenarios where you don't know your immediate connection's IP address beforehand (to configure it as a trusted proxy) but can still trust it, e.g. on Heroku, there is a custom RequestHandler `XForwardedTrustImmediateConnectionRequestHandler` which replaces the immediate connection with the last IP address in the X-Forwarded-For header, if available.
 
-__Note:__ the latest release 2.1.0 still checks the `X-Forwarded-For` header first and takes the last entry from the list. Only if there is no `X-Forwarded-For` header it will fall back to `RequestHeaders.remoteAddress`. 
+__Note:__ release 2.1.0 still checks the `X-Forwarded-For` header first and takes the last entry from the list. Only if there is no `X-Forwarded-For` header it will fall back to `RequestHeaders.remoteAddress`. 
