@@ -43,15 +43,6 @@ class TokenBucketGroupSpec extends FlatSpecLike with MustMatchers with ScalaFutu
     }
   }
 
-  it should "not allow negative token count" in {
-    val ref = new TokenBucketGroup(100, 2)
-    forAll(Gen.negNum[Int]) { (i: Int) =>
-      intercept[IllegalArgumentException] {
-        ref.consume("x", i)
-      }
-    }
-  }
-
   it should "handle different keys separately" in {
     val fakeClock = new FakeClock
     val ref = new TokenBucketGroup(1000, 2, fakeClock)

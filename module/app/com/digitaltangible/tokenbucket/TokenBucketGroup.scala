@@ -25,24 +25,23 @@ class TokenBucketGroup(size: Int, rate: Float, clock: Clock = CurrentTimeClock) 
   require(size > 0)
   require(rate >= 0.000001f)
 
-  private val intervalMillis: Int = (1000 / rate).toInt
+  private[this] val intervalMillis: Int = (1000 / rate).toInt
 
-  private val ratePerMilli: Double = rate / 1000
+  private[this] val ratePerMilli: Double = rate / 1000
 
   // encapsulated mutable state
-  private var lastRefill: Long = clock.now
+  private[this] var lastRefill: Long = clock.now
 
-  private var buckets = Map.empty[Any, Int]
+  private[this] var buckets = Map.empty[Any, Int]
 
   /**
     * First refills all buckets at the given rate, then tries to consume the required amount.
     * If no bucket exists for the given key, a new full one is created.
     * @param key
-    * @param required number tokens to consume, can not be negative
+    * @param required number of tokens to consume
     * @return
     */
   def consume(key: Any, required: Int): Future[Int] = this.synchronized {
-    require(required >= 0)
     refillAll()
     val newLevel = buckets.getOrElse(key, size) - required
     if (newLevel >= 0) {
