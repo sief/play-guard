@@ -17,10 +17,10 @@ object KeyRateLimitFilter {
    * @param rejectResponse
    * @return
    */
-  def apply(
+  def apply[R[_] <: Request[_]](
     rl: RateLimiter
-  )(rejectResponse: Request[_] => Result, key: Any)(implicit ec: ExecutionContext): RateLimitActionFilter[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse, _ => key)
+  )(rejectResponse: R[_] => Result, key: Any)(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
+    new RateLimitActionFilter[R](rl)(rejectResponse, _ => key)
 }
 
 object IpRateLimitFilter {
@@ -33,10 +33,10 @@ object IpRateLimitFilter {
    * @param rejectResponse
    * @return
    */
-  def apply(
+  def apply[R[_] <: Request[_]](
     rl: RateLimiter
-  )(rejectResponse: Request[_] => Result)(implicit ec: ExecutionContext): RateLimitActionFilter[Request] =
-    new RateLimitActionFilter[Request](rl)(rejectResponse, _.remoteAddress)
+  )(rejectResponse: R[_] => Result)(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
+    new RateLimitActionFilter[R](rl)(rejectResponse, _.remoteAddress)
 }
 
 /**
@@ -78,10 +78,12 @@ object HttpErrorRateLimitFunction {
    * @param ec
    * @return
    */
-  def apply(
+  def apply[R[_] <: Request[_]](
     rl: RateLimiter
-  )(rejectResponse: Request[_] => Result, errorCodes: Seq[Int] = 400 to 499)(implicit ec: ExecutionContext) =
-    new FailureRateLimitFunction[Request](rl)(
+  )(rejectResponse: R[_] => Result, errorCodes: Seq[Int] = 400 to 499)(
+    implicit ec: ExecutionContext
+  ): FailureRateLimitFunction[R] =
+    new FailureRateLimitFunction[R](rl)(
       rejectResponse,
       _.remoteAddress,
       r => !(errorCodes contains r.header.status)

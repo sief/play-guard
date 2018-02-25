@@ -121,7 +121,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       val fakeClock = new FakeClock
       val rl = new RateLimiter(1, 2, "test", fakeClock)
 
-      val action = (actionBuilder andThen HttpErrorRateLimitFunction(rl)(_ => BadRequest, Seq(UNAUTHORIZED))) {
+      val action = (actionBuilder andThen HttpErrorRateLimitFunction[Request](rl)(_ => BadRequest, Seq(UNAUTHORIZED))) {
         request: RequestHeader =>
           if (request.path == "/") Ok
           else Unauthorized
