@@ -18,8 +18,7 @@ scalacOptions ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.13.5" % "test",
-  "com.typesafe.akka" %% "akka-testkit" % "2.5.9" % "test"
+  "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
 )
 
                                                       

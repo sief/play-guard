@@ -1,14 +1,5 @@
 package com.digitaltangible.tokenbucket
 
-import java.util.concurrent.TimeUnit
-
-import akka.actor._
-import akka.event.LoggingReceive
-import akka.pattern.ask
-import akka.util.Timeout
-
-import scala.concurrent.{ExecutionContext, Future}
-
 /**
   * Token Bucket implementation as described here http://en.wikipedia.org/wiki/Token_bucket
   */
@@ -41,13 +32,13 @@ class TokenBucketGroup(size: Int, rate: Float, clock: Clock = CurrentTimeClock) 
     * @param required number of tokens to consume
     * @return
     */
-  def consume(key: Any, required: Int): Future[Int] = this.synchronized {
+  def consume(key: Any, required: Int): Int = this.synchronized {
     refillAll()
     val newLevel = buckets.getOrElse(key, size) - required
     if (newLevel >= 0) {
       buckets = buckets + (key -> newLevel)
     }
-    Future.successful(newLevel)
+    newLevel
   }
 
   /**

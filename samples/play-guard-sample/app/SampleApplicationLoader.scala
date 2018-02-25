@@ -28,9 +28,4 @@ class ApplicationComponents(context: Context)
 
   override lazy val httpFilters: Seq[EssentialFilter] = Seq(guardFilter)
 
-  override lazy val httpRequestHandler =
-    new TrustedImmediateConnectionXForwardedForRequestHandler(router,
-                                                              httpErrorHandler,
-                                                              httpConfiguration,
-                                                              httpFilters)
 }
