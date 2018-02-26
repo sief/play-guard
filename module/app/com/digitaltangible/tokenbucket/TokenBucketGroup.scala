@@ -1,23 +1,22 @@
 package com.digitaltangible.tokenbucket
 
 /**
-  * Token Bucket implementation as described here http://en.wikipedia.org/wiki/Token_bucket
-  */
-
-
+ * Token Bucket implementation as described here http://en.wikipedia.org/wiki/Token_bucket
+ */
 /**
-  * TokenBucketGroup which synchronizes the bucket token requests.
-  *
-  * @param size  bucket size
-  * @param rate  refill rate in tokens per second
-  * @param clock for mocking the current time.
-  */
+ * TokenBucketGroup which synchronizes the bucket token requests.
+ *
+ * @param size  bucket size
+ * @param rate  refill rate in tokens per second
+ * @param clock for mocking the current time.
+ */
 class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock) {
+
+  private val NanosPerSecond = 1000000000
+
   require(size > 0)
   require(rate >= 0.000001f)
   require(rate < NanosPerSecond)
-
-  private[this] lazy val NanosPerSecond = 1000000000
 
   private[this] val intervalNanos: Long = (NanosPerSecond / rate).toLong
 
@@ -26,15 +25,15 @@ class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock
   // encapsulated mutable state
   private[this] var lastRefill: Long = clock.now
 
-  var buckets = Map.empty[Any, Long]
+  private[this] var buckets = Map.empty[Any, Long]
 
   /**
-    * First refills all buckets at the given rate, then tries to consume the required amount.
-    * If no bucket exists for the given key, a new full one is created.
-    * @param key
-    * @param required number of tokens to consume
-    * @return
-    */
+   * First refills all buckets at the given rate, then tries to consume the required amount.
+   * If no bucket exists for the given key, a new full one is created.
+   * @param key
+   * @param required number of tokens to consume
+   * @return
+   */
   def consume(key: Any, required: Int): Long = this.synchronized {
     refillAll()
     val newLevel = buckets.getOrElse(key, size) - required
@@ -45,8 +44,8 @@ class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock
   }
 
   /**
-    * Refills all buckets at the given rate. Full buckets are removed.
-    */
+   * Refills all buckets at the given rate. Full buckets are removed.
+   */
   private def refillAll() {
     val now: Long = clock.now
     val diff: Long = now - lastRefill

@@ -14,6 +14,7 @@ import scala.util.Try
  * Custom RequestHandler to replace the immediate connection with the last IP address in the X-Forwarded-For header, if available.
  * This is meant for scenarios where you don't know your immediate connection's IP address beforehand
  * (to configure it as a trusted proxy) but can still trust it, e.g. on Heroku.
+ * Does not support RFC 7239.
  *
  * @param router
  * @param errorHandler
