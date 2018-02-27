@@ -207,12 +207,12 @@ The filter uses the black/whitelists from the configuration by default. You can 
  ```
 
 
-# 3. Configuration
+2.2 Configuration
+----------
 
 
 ```
 playguard {
-  # required for the global GuardFilter
   filter {
     enabled = true
     global {
@@ -233,8 +233,7 @@ playguard {
 }
 ```
 
-3.1 Configuring the remote IP address
--------------------------------------
+# 3 Configuring the remote IP address
 
 IP-based rate limits will use `RequestHeader.remoteAddress` as the address of the client. Depending on [how you have configured Play](https://www.playframework.com/documentation/2.6.x/HTTPServer#Configuring-trusted-proxies) this may be the actual remote address of clients connecting directly, or it may be read from the common `X-Forwarded-For` or `Forwarded` headers that are set by proxies and load balancers.
 
