@@ -1,10 +1,8 @@
 package com.digitaltangible.tokenbucket
 
 /**
- * Token Bucket implementation as described here http://en.wikipedia.org/wiki/Token_bucket
- */
-/**
  * TokenBucketGroup which synchronizes the bucket token requests.
+ * Token Bucket implementation as described here http://en.wikipedia.org/wiki/Token_bucket
  *
  * @param size  bucket size
  * @param rate  refill rate in tokens per second
@@ -22,6 +20,8 @@ class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock
 
   private[this] val ratePerNano: Double = rate / NanosPerSecond
 
+  private[this] object Lock
+
   // encapsulated mutable state
   private[this] var lastRefill: Long = clock.now
 
@@ -34,7 +34,7 @@ class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock
    * @param required number of tokens to consume
    * @return
    */
-  def consume(key: Any, required: Int): Long = this.synchronized {
+  def consume(key: Any, required: Int): Long = Lock.synchronized {
     refillAll()
     val newLevel = buckets.getOrElse(key, size) - required
     if (newLevel >= 0) {
@@ -46,7 +46,7 @@ class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock
   /**
    * Refills all buckets at the given rate. Full buckets are removed.
    */
-  private def refillAll() {
+  private[this] def refillAll() {
     val now: Long = clock.now
     val diff: Long = now - lastRefill
     val tokensToAdd: Long = (diff * ratePerNano).toLong
