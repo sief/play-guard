@@ -19,7 +19,7 @@ object KeyRateLimitFilter {
    */
   def apply[R[_] <: Request[_]](
     rl: RateLimiter
-  )(rejectResponse: R[_] => Result, key: Any)(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
+  )(rejectResponse: R[_] => Future[Result], key: Any)(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
     new RateLimitActionFilter[R](rl)(rejectResponse, _ => key)
 }
 
@@ -35,7 +35,7 @@ object IpRateLimitFilter {
    */
   def apply[R[_] <: Request[_]](
     rl: RateLimiter
-  )(rejectResponse: R[_] => Result)(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
+  )(rejectResponse: R[_] => Future[Result])(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
     new RateLimitActionFilter[R](rl)(rejectResponse, _.remoteAddress)
 }
 
@@ -50,7 +50,7 @@ object IpRateLimitFilter {
  * @param executionContext
  * @return
  */
-class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Result, f: R[_] => Any)(
+class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Future[Result], f: R[_] => Any)(
   implicit val executionContext: ExecutionContext
 ) extends ActionFilter[R] {
 
@@ -61,7 +61,7 @@ class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse:
     if (rl.consumeAndCheck(key)) Future.successful(None)
     else {
       logger.warn(s"${request.method} ${request.uri} rejected, rate limit for $key exceeded.")
-      Future.successful(Some(rejectResponse(request)))
+      rejectResponse(request).map(Some.apply)
     }
   }
 }
@@ -80,7 +80,7 @@ object HttpErrorRateLimitFunction {
    */
   def apply[R[_] <: Request[_]](
     rl: RateLimiter
-  )(rejectResponse: R[_] => Result, errorCodes: Seq[Int] = 400 to 499)(
+  )(rejectResponse: R[_] => Future[Result], errorCodes: Seq[Int] = 400 to 499)(
     implicit ec: ExecutionContext
   ): FailureRateLimitFunction[R] =
     new FailureRateLimitFunction[R](rl)(
@@ -103,7 +103,7 @@ object HttpErrorRateLimitFunction {
  * @tparam R
  */
 class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(
-  rejectResponse: R[_] => Result,
+  rejectResponse: R[_] => Future[Result],
   keyFromRequest: R[_] => Any,
   resultCheck: Result => Boolean
 )(implicit val executionContext: ExecutionContext)
@@ -123,7 +123,7 @@ class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(
       }
     } else {
       logger.warn(s"${request.method} ${request.uri} rejected, failure rate limit for $key exceeded.")
-      Future.successful(rejectResponse(request))
+      rejectResponse(request).map(Some.apply)
     }
   }
 }
