@@ -136,9 +136,9 @@ class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(
  * @param logPrefix
  * @param clock
  */
-class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock) {
+class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock) extends Serializable {
 
-  private val logger = Logger(this.getClass)
+  @transient private lazy val logger = Logger(this.getClass)
 
   private lazy val tokenBucketGroup = new TokenBucketGroup(size, rate, clock)
 

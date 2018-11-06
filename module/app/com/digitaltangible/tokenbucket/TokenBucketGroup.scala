@@ -8,7 +8,7 @@ package com.digitaltangible.tokenbucket
  * @param rate  refill rate in tokens per second
  * @param clock for mocking the current time.
  */
-class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock) {
+class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock) extends Serializable {
 
   private val NanosPerSecond = 1000000000
 
