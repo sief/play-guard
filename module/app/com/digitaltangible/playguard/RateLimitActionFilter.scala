@@ -123,7 +123,7 @@ class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(
       }
     } else {
       logger.warn(s"${request.method} ${request.uri} rejected, failure rate limit for $key exceeded.")
-      rejectResponse(request).map(Some.apply)
+      rejectResponse(request)
     }
   }
 }

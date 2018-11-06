@@ -9,7 +9,7 @@ import play.api.mvc._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with MustMatchers {
 
@@ -61,7 +61,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
     "limit request rate" in {
       val fakeClock = new FakeClock
       val rl = new RateLimiter(2, 2, "test", fakeClock)
-      val rejectResponse = (_: Request[_]) => TooManyRequests("test")
+      val rejectResponse = (_: Request[_]) => Future.successful(TooManyRequests("test"))
 
       val action = (actionBuilder andThen new RateLimitActionFilter[Request](rl)(rejectResponse, _ => "key")) {
         Ok("ok")
@@ -87,7 +87,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       val failFunc = (r: Result) => r.header.status == OK
 
       val action =
-        (actionBuilder andThen new FailureRateLimitFunction[Request](rl)(_ => BadRequest, _ => "key", failFunc)) {
+        (actionBuilder andThen new FailureRateLimitFunction[Request](rl)(_ => Future.successful(BadRequest), _ => "key", failFunc)) {
           request =>
             if (request.path == "/") Ok
             else BadRequest
@@ -121,7 +121,7 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       val fakeClock = new FakeClock
       val rl = new RateLimiter(1, 2, "test", fakeClock)
 
-      val action = (actionBuilder andThen HttpErrorRateLimitFunction[Request](rl)(_ => BadRequest, Seq(UNAUTHORIZED))) {
+      val action = (actionBuilder andThen HttpErrorRateLimitFunction[Request](rl)(_ => Future.successful(BadRequest), Seq(UNAUTHORIZED))) {
         request: RequestHeader =>
           if (request.path == "/") Ok
           else Unauthorized
