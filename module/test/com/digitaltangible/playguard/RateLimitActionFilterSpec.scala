@@ -8,6 +8,7 @@ import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -54,6 +55,21 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       rateLimiter.check("1") mustBe false
       rateLimiter.consume("2") mustBe 1
       rateLimiter.check("2") mustBe true
+    }
+
+    "serialize MyRateLimiter" in {
+      val limiter = new RateLimiter(1, 2)
+
+      val baos = new ByteArrayOutputStream()
+      val oos = new ObjectOutputStream(baos)
+      oos.writeObject(limiter)
+      oos.close()
+
+      val ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray))
+      val limiter2 = ois.readObject.asInstanceOf[RateLimiter]
+      ois.close()
+
+      limiter2.consume("") mustBe 0 //not really interested in the result just that it doesn't throw
     }
   }
 

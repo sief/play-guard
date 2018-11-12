@@ -7,6 +7,6 @@ trait Clock {
   def now: Long
 }
 
-object CurrentTimeClock extends Clock {
+object CurrentTimeClock extends Clock with Serializable {
   override def now: Long = System.nanoTime()
 }
