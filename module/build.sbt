@@ -6,7 +6,7 @@ version := "2.3.0-SNAPSHOT"
 
 scalaVersion := "2.12.4"
 
-crossScalaVersions := Seq("2.12.4", "2.11.12")
+crossScalaVersions := Seq("2.13.0", "2.12.4", "2.11.12")
 
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
@@ -17,8 +17,8 @@ scalacOptions ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
+  "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
 )
 
 
