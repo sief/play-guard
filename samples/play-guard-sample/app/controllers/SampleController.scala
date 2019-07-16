@@ -5,7 +5,7 @@ import com.digitaltangible.playguard._
 import play.api.Configuration
 import play.api.mvc._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Sample app for rate limit actions
@@ -20,7 +20,7 @@ class SampleController(components: ControllerComponents)(implicit system: ActorS
   // allow 3 requests immediately and get a new token every 5 seconds
   private val ipRateLimitFilter = IpRateLimitFilter[Request](new RateLimiter(3, 1f / 5, "test limit by IP address")) {
     implicit r: RequestHeader =>
-      TooManyRequests(s"""rate limit for ${r.remoteAddress} exceeded""")
+      Future.successful(TooManyRequests(s"""rate limit for ${r.remoteAddress} exceeded"""))
   }
 
   def limitedByIp = (Action andThen ipRateLimitFilter) {
@@ -32,14 +32,14 @@ class SampleController(components: ControllerComponents)(implicit system: ActorS
     KeyRateLimitFilter[Request](new RateLimiter(4, 1f / 15, "test by token")) _
 
   def limitedByKey(key: String) =
-    (Action andThen keyRateLimitFilter(_ => TooManyRequests(s"""rate limit for '$key' exceeded"""), key)) {
+    (Action andThen keyRateLimitFilter(_ => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded""")), key)) {
       Ok("limited by token")
     }
 
   // allow 2 failures immediately and get a new token every 10 seconds
   private val httpErrorRateLimitFunction = HttpErrorRateLimitFunction[Request](new RateLimiter(2, 1f / 10, "test failure rate limit")) {
     implicit r: RequestHeader =>
-      BadRequest("failure rate exceeded")
+      Future.successful(BadRequest("failure rate exceeded"))
   }
 
   def failureLimitedByIp(fail: Boolean) =
@@ -50,7 +50,7 @@ class SampleController(components: ControllerComponents)(implicit system: ActorS
 
   // combine tokenRateLimited and httpErrorRateLimited
   def limitByKeyAndHttpErrorByIp(key: String, fail: Boolean) =
-    (Action andThen keyRateLimitFilter(_ => TooManyRequests(s"""rate limit for '$key' exceeded"""), key) andThen httpErrorRateLimitFunction) {
+    (Action andThen keyRateLimitFilter(_ => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded""")), key) andThen httpErrorRateLimitFunction) {
 
       if (fail) BadRequest("failed")
       else Ok("Ok")

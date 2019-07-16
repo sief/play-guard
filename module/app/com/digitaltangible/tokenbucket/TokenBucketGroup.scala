@@ -46,12 +46,12 @@ class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock
   /**
    * Refills all buckets at the given rate. Full buckets are removed.
    */
-  private[this] def refillAll() {
+  private[this] def refillAll(): Unit = {
     val now: Long = clock.now
     val diff: Long = now - lastRefill
     val tokensToAdd: Long = (diff * ratePerNano).toLong
     if (tokensToAdd > 0) {
-      buckets = buckets.mapValues(_ + tokensToAdd).filterNot(_._2 >= size)
+      buckets = buckets.mapValues(_ + tokensToAdd).filterNot(_._2 >= size).toMap
       lastRefill = now - diff % intervalNanos
     }
   }

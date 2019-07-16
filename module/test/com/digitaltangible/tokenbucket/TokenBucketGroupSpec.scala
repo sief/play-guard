@@ -2,10 +2,10 @@ package com.digitaltangible.tokenbucket
 
 import com.digitaltangible.FakeClock
 import org.scalacheck.Gen
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalatest.{FlatSpecLike, MustMatchers}
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 
-class TokenBucketGroupSpec extends FlatSpecLike with MustMatchers with GeneratorDrivenPropertyChecks {
+class TokenBucketGroupSpec extends FlatSpecLike with MustMatchers with ScalaCheckDrivenPropertyChecks {
 
   "new TokenBucketGroup" should
     "allow only values for size and rate in their range" in {
@@ -86,7 +86,7 @@ class TokenBucketGroupSpec extends FlatSpecLike with MustMatchers with Generator
     ref.consume("x", 1) mustBe -1
     ref.consume("x", 0) mustBe 0
 
-    fakeClock.ts += 9999000000l
+    fakeClock.ts += 9999000000L
     ref.consume("x", 0) mustBe 0
     ref.consume("x", 1) mustBe -1
     ref.consume("x", 0) mustBe 0
@@ -96,13 +96,13 @@ class TokenBucketGroupSpec extends FlatSpecLike with MustMatchers with Generator
     ref.consume("x", 1) mustBe 0
     ref.consume("x", 1) mustBe -1
 
-    fakeClock.ts += 30000000000l
+    fakeClock.ts += 30000000000L
     ref.consume("x", 0) mustBe 3
     ref.consume("x", 2) mustBe 1
     ref.consume("x", 1) mustBe 0
     ref.consume("x", 1) mustBe -1
 
-    fakeClock.ts += 70000000000l
+    fakeClock.ts += 70000000000L
     ref.consume("x", 0) mustBe 7
     ref.consume("x", 3) mustBe 4
     ref.consume("x", 4) mustBe 0
@@ -115,11 +115,11 @@ class TokenBucketGroupSpec extends FlatSpecLike with MustMatchers with Generator
     ref.consume("x", 1000) mustBe 0
     ref.consume("x", 1) mustBe -1
 
-    fakeClock.ts += 100000000000l
+    fakeClock.ts += 100000000000L
     ref.consume("x", 1000) mustBe 0
     ref.consume("x", 1) mustBe -1
 
-    fakeClock.ts += 1000000000000l
+    fakeClock.ts += 1000000000000L
     ref.consume("x", 1000) mustBe 0
     ref.consume("x", 1) mustBe -1
   }
@@ -141,22 +141,22 @@ class TokenBucketGroupSpec extends FlatSpecLike with MustMatchers with Generator
    */
   it should "regain tokens at specified rate with real clock" in {
     val ref = new TokenBucketGroup(200, 1000)
-    ref.consume("x", 200) must be >= 0l
-    ref.consume("x", 200) must be < 0l
+    ref.consume("x", 200) must be >= 0L
+    ref.consume("x", 200) must be < 0L
 
     Thread.sleep(100)
 
-    ref.consume("x", 100) must be >= 0l
-    ref.consume("x", 100) must be < 0l
+    ref.consume("x", 100) must be >= 0L
+    ref.consume("x", 100) must be < 0L
 
     Thread.sleep(200)
 
-    ref.consume("x", 200) must be >= 0l
-    ref.consume("x", 200) must be < 0l
+    ref.consume("x", 200) must be >= 0L
+    ref.consume("x", 200) must be < 0L
 
     Thread.sleep(300)
 
-    ref.consume("x", 200) must be >= 0l
-    ref.consume("x", 200) must be < 0l
+    ref.consume("x", 200) must be >= 0L
+    ref.consume("x", 200) must be < 0L
   }
 }
