@@ -4,9 +4,9 @@ organization := """com.digitaltangible"""
 
 version := "2.3.0-SNAPSHOT"
 
-scalaVersion := "2.12.4"
+scalaVersion := "2.12.8"
 
-crossScalaVersions := Seq("2.13.0", "2.12.4", "2.11.12")
+crossScalaVersions := Seq("2.13.0", "2.12.8", "2.11.12")
 
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
