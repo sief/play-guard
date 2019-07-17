@@ -1,12 +1,13 @@
 package com.digitaltangible.playguard
 
 import java.net.InetAddress
-import javax.inject.Inject
 
+import javax.inject.Inject
 import play.api.http._
 import play.api.mvc.request.RemoteConnection
 import play.api.mvc.{EssentialFilter, Handler, Headers, RequestHeader}
 import play.api.routing.Router
+import play.core.DefaultWebCommands
 
 import scala.util.Try
 
@@ -27,10 +28,12 @@ class XForwardedTrustImmediateConnectionRequestHandler @Inject()(
   configuration: HttpConfiguration,
   filters: Seq[EssentialFilter]
 ) extends DefaultHttpRequestHandler(
+      new DefaultWebCommands,
+      None,
       router,
       errorHandler,
       configuration,
-      filters: _*
+      filters
     )
     with HeaderNames {
 
