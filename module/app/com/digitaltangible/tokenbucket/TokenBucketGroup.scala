@@ -51,7 +51,7 @@ class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock
     val diff: Long = now - lastRefill
     val tokensToAdd: Long = (diff * ratePerNano).toLong
     if (tokensToAdd > 0) {
-      buckets = buckets.mapValues(_ + tokensToAdd).filterNot(_._2 >= size).toMap
+      buckets = buckets.map { case (k, v) => (k, v + tokensToAdd) }.filter(_._2 < size)
       lastRefill = now - diff % intervalNanos
     }
   }
