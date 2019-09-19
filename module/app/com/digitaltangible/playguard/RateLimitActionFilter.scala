@@ -12,15 +12,20 @@ object KeyRateLimitFilter {
    * Creates an ActionFilter which holds a RateLimiter with a bucket for each key.
    * Every request consumes a token. If no tokens remain, the request is rejected.
    *
-   * @param rl
-   * @param key
+   * @param rateLimiter
    * @param rejectResponse
+   * @param bucketKey
+   * @param bypass
+   * @param ec
+   * @tparam R
    * @return
    */
   def apply[R[_] <: Request[_]](
-    rl: RateLimiter
-  )(rejectResponse: R[_] => Future[Result], key: Any)(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
-    new RateLimitActionFilter[R](rl)(rejectResponse, _ => key)
+    rateLimiter: RateLimiter
+  )(rejectResponse: R[_] => Future[Result], bucketKey: Any, bypass: R[_] => Boolean = (_: R[_]) => false)(
+    implicit ec: ExecutionContext
+  ): RateLimitActionFilter[R] =
+    new RateLimitActionFilter[R](rateLimiter)(rejectResponse, _ => bucketKey, bypass)
 }
 
 object IpRateLimitFilter {
@@ -29,36 +34,41 @@ object IpRateLimitFilter {
    * Creates an ActionFilter which holds a RateLimiter with a bucket for each IP address.
    * Every request consumes a token. If no tokens remain, the request is rejected.
    *
-   * @param rl
+   * @param rateLimiter
    * @param rejectResponse
+   * @param ipWhitelist
    * @return
    */
   def apply[R[_] <: Request[_]](
-    rl: RateLimiter
-  )(rejectResponse: R[_] => Future[Result])(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
-    new RateLimitActionFilter[R](rl)(rejectResponse, _.remoteAddress)
+    rateLimiter: RateLimiter
+  )(rejectResponse: R[_] => Future[Result], ipWhitelist: Set[String] = Set.empty)(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
+    new RateLimitActionFilter[R](rateLimiter)(rejectResponse, _.remoteAddress, req => ipWhitelist.contains(req.remoteAddress))
 }
 
 /**
  * ActionFilter which holds a RateLimiter with a bucket for each key returned by function f.
  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
  *
- * @param rl
+ * @param rateLimiter
  * @param rejectResponse
- * @param f
- * @tparam R
+ * @param keyFromRequest
+ * @param bypass
  * @param executionContext
- * @return
+ * @tparam R
  */
-class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(rejectResponse: R[_] => Future[Result], f: R[_] => Any)(
+class RateLimitActionFilter[R[_] <: Request[_]](rateLimiter: RateLimiter)(
+  rejectResponse: R[_] => Future[Result],
+  keyFromRequest: R[_] => Any,
+  bypass: R[_] => Boolean = (_: R[_]) => false
+)(
   implicit val executionContext: ExecutionContext
 ) extends ActionFilter[R] {
 
   private val logger = Logger(this.getClass)
 
   def filter[A](request: R[A]): Future[Option[Result]] = {
-    val key = f(request)
-    if (rl.consumeAndCheck(key)) Future.successful(None)
+    val key = keyFromRequest(request)
+    if (bypass(request) || rateLimiter.consumeAndCheck(key)) Future.successful(None)
     else {
       logger.warn(s"${request.method} ${request.uri} rejected, rate limit for $key exceeded.")
       rejectResponse(request).map(Some.apply)
@@ -72,21 +82,24 @@ object HttpErrorRateLimitFunction {
    * Creates an ActionFunction which holds a RateLimiter with a bucket for each IP address.
    * Tokens are consumed only by failures determined by HTTP error codes. If no tokens remain, the request is rejected.
    *
-   * @param rl
+   * @param rateLimiter
    * @param rejectResponse
    * @param errorCodes
+   * @param ipWhitelist
    * @param ec
+   * @tparam R
    * @return
    */
   def apply[R[_] <: Request[_]](
-    rl: RateLimiter
-  )(rejectResponse: R[_] => Future[Result], errorCodes: Seq[Int] = 400 to 499)(
+    rateLimiter: RateLimiter
+  )(rejectResponse: R[_] => Future[Result], errorCodes: Seq[Int] = 400 to 499, ipWhitelist: Set[String] = Set.empty)(
     implicit ec: ExecutionContext
   ): FailureRateLimitFunction[R] =
-    new FailureRateLimitFunction[R](rl)(
+    new FailureRateLimitFunction[R](rateLimiter)(
       rejectResponse,
       _.remoteAddress,
-      r => !(errorCodes contains r.header.status)
+      r => !errorCodes.contains(r.header.status),
+      req => ipWhitelist.contains(req.remoteAddress)
     )
 }
 
@@ -95,30 +108,32 @@ object HttpErrorRateLimitFunction {
  * Tokens are consumed only by failures determined by function resultCheck. If no tokens remain, requests with this key are rejected.
  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
  *
- * @param rl
+ * @param rateLimiter
  * @param rejectResponse
  * @param keyFromRequest
  * @param resultCheck
+ * @param bypass
  * @param executionContext
  * @tparam R
  */
-class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(
+class FailureRateLimitFunction[R[_] <: Request[_]](rateLimiter: RateLimiter)(
   rejectResponse: R[_] => Future[Result],
   keyFromRequest: R[_] => Any,
-  resultCheck: Result => Boolean
+  resultCheck: Result => Boolean,
+  bypass: R[_] => Boolean = (_: R[_]) => false
 )(implicit val executionContext: ExecutionContext)
     extends ActionFunction[R, R] {
 
   private val logger = Logger(this.getClass)
 
   def invokeBlock[A](request: R[A], block: (R[A]) => Future[Result]): Future[Result] = {
-
     val key = keyFromRequest(request)
-
-    if (rl.check(key)) {
+    if (bypass(request)) {
+      block(request)
+    } else if (rateLimiter.check(key)) {
       val res = block(request)
       res.map { res =>
-        if (!resultCheck(res)) rl.consume(key)
+        if (!resultCheck(res)) rateLimiter.consume(key)
         res
       }
     } else {
