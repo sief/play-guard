@@ -92,7 +92,7 @@ object HttpErrorRateLimitFunction {
    */
   def apply[R[_] <: Request[_]](
     rateLimiter: RateLimiter
-  )(rejectResponse: R[_] => Future[Result], errorCodes: Seq[Int] = 400 to 499, ipWhitelist: Set[String] = Set.empty)(
+  )(rejectResponse: R[_] => Future[Result], errorCodes: Set[Int] = (400 to 499).toSet, ipWhitelist: Set[String] = Set.empty)(
     implicit ec: ExecutionContext
   ): FailureRateLimitFunction[R] =
     new FailureRateLimitFunction[R](rateLimiter)(

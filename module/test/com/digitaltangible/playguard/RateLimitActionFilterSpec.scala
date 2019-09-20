@@ -1,5 +1,7 @@
 package com.digitaltangible.playguard
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+
 import com.digitaltangible.FakeClock
 import org.scalatest.MustMatchers
 import org.scalatestplus.play.PlaySpec
@@ -8,7 +10,6 @@ import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -78,12 +79,30 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       val fakeClock = new FakeClock
       val rl = new RateLimiter(2, 2, "test", fakeClock)
       val rejectResponse = (_: Request[_]) => Future.successful(TooManyRequests("test"))
-
-      val action = (actionBuilder andThen new RateLimitActionFilter[Request](rl)(rejectResponse, _ => "key")) {
-        Ok("ok")
-      }
+      val action = (actionBuilder andThen new RateLimitActionFilter[Request](rl)(rejectResponse, _ => "key", _.path == "/bp")) { Ok("ok") }
       val request = FakeRequest(GET, "/")
+      val bypassRequest = FakeRequest(GET, "/bp")
+      var result = call(action, request)
+      status(result) mustEqual OK
+      result = call(action, request)
+      status(result) mustEqual OK
+      result = call(action, request)
+      status(result) mustEqual TOO_MANY_REQUESTS
+      result = call(action, bypassRequest)
+      status(result) mustEqual OK
+      fakeClock.ts = 501000000
+      result = call(action, request)
+      status(result) mustEqual OK
+    }
+  }
 
+  "IpRateLimitFilter" should {
+    "limit request rate" in {
+      val fakeClock = new FakeClock
+      val rl = new RateLimiter(2, 2, "test", fakeClock)
+      val rejectResponse = (_: Request[_]) => Future.successful(TooManyRequests("test"))
+      val action = (actionBuilder andThen IpRateLimitFilter[Request](rl)(rejectResponse)) { Ok("ok") }
+      val request = FakeRequest(GET, "/")
       var result = call(action, request)
       status(result) mustEqual OK
       result = call(action, request)
@@ -94,22 +113,38 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       result = call(action, request)
       status(result) mustEqual OK
     }
+
+    "not limit request rate for whitelist" in {
+      val rl = new RateLimiter(2, 2, "test", new FakeClock)
+      val rejectResponse = (_: Request[_]) => Future.successful(TooManyRequests("test"))
+      val action = (actionBuilder andThen IpRateLimitFilter[Request](rl)(rejectResponse, Set("127.0.0.1"))) { Ok("ok") }
+      val request = FakeRequest(GET, "/")
+      var result = call(action, request)
+      status(result) mustEqual OK
+      result = call(action, request)
+      status(result) mustEqual OK
+      result = call(action, request)
+      status(result) mustEqual OK
+    }
   }
 
   "FailureRateLimitFunction" should {
     "limit failure rate" in {
       val fakeClock = new FakeClock
       val rl = new RateLimiter(2, 2, "test", fakeClock)
-      val failFunc = (r: Result) => r.header.status == OK
-
       val action =
-        (actionBuilder andThen new FailureRateLimitFunction[Request](rl)(_ => Future.successful(BadRequest), _ => "key", failFunc)) {
-          request =>
-            if (request.path == "/") Ok
-            else BadRequest
+        (actionBuilder andThen new FailureRateLimitFunction[Request](rl)(
+          _ => Future.successful(TooManyRequests),
+          _ => "key",
+          _.header.status == OK,
+          _.path == "/bp"
+        )) { request =>
+          if (request.path == "/") Ok
+          else Unauthorized
         }
       val requestOk = FakeRequest(GET, "/")
       val requestFail = FakeRequest(GET, "/x")
+      val bypassRequestFail = FakeRequest(GET, "/bp")
 
       var result = call(action, requestOk)
       status(result) mustEqual OK
@@ -118,13 +153,17 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
       result = call(action, requestOk)
       status(result) mustEqual OK
       result = call(action, requestFail)
-      status(result) mustEqual BAD_REQUEST
+      status(result) mustEqual UNAUTHORIZED
       result = call(action, requestOk)
       status(result) mustEqual OK
       result = call(action, requestFail)
-      status(result) mustEqual BAD_REQUEST
+      status(result) mustEqual UNAUTHORIZED
+      result = call(action, requestFail)
+      status(result) mustEqual TOO_MANY_REQUESTS
       result = call(action, requestOk)
-      status(result) mustEqual BAD_REQUEST
+      status(result) mustEqual TOO_MANY_REQUESTS
+      result = call(action, bypassRequestFail)
+      status(result) mustEqual UNAUTHORIZED
       fakeClock.ts = 501000000
       result = call(action, requestOk)
       status(result) mustEqual OK
@@ -136,25 +175,37 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with M
 
       val fakeClock = new FakeClock
       val rl = new RateLimiter(1, 2, "test", fakeClock)
-
-      val action = (actionBuilder andThen HttpErrorRateLimitFunction[Request](rl)(_ => Future.successful(BadRequest), Seq(UNAUTHORIZED))) {
-        request: RequestHeader =>
+      val action =
+        (actionBuilder andThen HttpErrorRateLimitFunction[Request](rl)(_ => Future.successful(TooManyRequests), Set(UNAUTHORIZED))) { request: RequestHeader =>
           if (request.path == "/") Ok
           else Unauthorized
-      }
-
+        }
       val requestOk = FakeRequest(GET, "/")
       val requestFail = FakeRequest(GET, "/x")
-
       var result = call(action, requestOk)
       status(result) mustEqual OK
       result = call(action, requestFail)
       status(result) mustEqual UNAUTHORIZED
       result = call(action, requestOk)
-      status(result) mustEqual BAD_REQUEST
+      status(result) mustEqual TOO_MANY_REQUESTS
+      result = call(action, requestFail)
+      status(result) mustEqual TOO_MANY_REQUESTS
       fakeClock.ts = 501000000
       result = call(action, requestOk)
       status(result) mustEqual OK
+      result = call(action, requestFail)
+      status(result) mustEqual UNAUTHORIZED
+    }
+
+    "not limit failure rate for whitelist" in {
+      val rl = new RateLimiter(1, 2, "test", new FakeClock)
+      val action =
+        (actionBuilder andThen HttpErrorRateLimitFunction[Request](rl)(_ => Future.successful(TooManyRequests), Set(UNAUTHORIZED), Set("127.0.0.1"))) { Unauthorized }
+      val request = FakeRequest(GET, "/")
+      var result = call(action, request)
+      status(result) mustEqual UNAUTHORIZED
+      result = call(action, request)
+      status(result) mustEqual UNAUTHORIZED
     }
   }
 }
