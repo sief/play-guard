@@ -14,18 +14,17 @@ object KeyRateLimitFilter {
    *
    * @param rateLimiter
    * @param rejectResponse
-   * @param bucketKey
    * @param bypass
+   * @param bucketKey
    * @param ec
+   * @tparam K
    * @tparam R
    * @return
    */
-  def apply[R[_] <: Request[_]](
-    rateLimiter: RateLimiter
-  )(rejectResponse: R[_] => Future[Result], bucketKey: Any, bypass: R[_] => Boolean = (_: R[_]) => false)(
+  def apply[K, R[_] <: Request[_]](rateLimiter: RateLimiter, rejectResponse: (K, R[_]) => Future[Result], bypass: (K, R[_]) => Boolean = (_: K, _: R[_]) => false)(bucketKey: K)(
     implicit ec: ExecutionContext
   ): RateLimitActionFilter[R] =
-    new RateLimitActionFilter[R](rateLimiter)(rejectResponse, _ => bucketKey, bypass)
+    new RateLimitActionFilter[R](rateLimiter, _ => bucketKey, rejectResponse(bucketKey, _), bypass(bucketKey, _))
 }
 
 object IpRateLimitFilter {
@@ -37,12 +36,14 @@ object IpRateLimitFilter {
    * @param rateLimiter
    * @param rejectResponse
    * @param ipWhitelist
+   * @param ec
+   * @tparam R
    * @return
    */
-  def apply[R[_] <: Request[_]](
-    rateLimiter: RateLimiter
-  )(rejectResponse: R[_] => Future[Result], ipWhitelist: Set[String] = Set.empty)(implicit ec: ExecutionContext): RateLimitActionFilter[R] =
-    new RateLimitActionFilter[R](rateLimiter)(rejectResponse, _.remoteAddress, req => ipWhitelist.contains(req.remoteAddress))
+  def apply[R[_] <: Request[_]](rateLimiter: RateLimiter, rejectResponse: R[_] => Future[Result], ipWhitelist: Set[String] = Set.empty)(
+    implicit ec: ExecutionContext
+  ): RateLimitActionFilter[R] =
+    new RateLimitActionFilter[R](rateLimiter, _.remoteAddress, rejectResponse, req => ipWhitelist.contains(req.remoteAddress))
 }
 
 /**
@@ -50,15 +51,16 @@ object IpRateLimitFilter {
  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
  *
  * @param rateLimiter
- * @param rejectResponse
  * @param keyFromRequest
+ * @param rejectResponse
  * @param bypass
  * @param executionContext
  * @tparam R
  */
-class RateLimitActionFilter[R[_] <: Request[_]](rateLimiter: RateLimiter)(
-  rejectResponse: R[_] => Future[Result],
+class RateLimitActionFilter[R[_] <: Request[_]](
+  rateLimiter: RateLimiter,
   keyFromRequest: R[_] => Any,
+  rejectResponse: R[_] => Future[Result],
   bypass: R[_] => Boolean = (_: R[_]) => false
 )(
   implicit val executionContext: ExecutionContext
@@ -90,17 +92,10 @@ object HttpErrorRateLimitFunction {
    * @tparam R
    * @return
    */
-  def apply[R[_] <: Request[_]](
-    rateLimiter: RateLimiter
-  )(rejectResponse: R[_] => Future[Result], errorCodes: Set[Int] = (400 to 499).toSet, ipWhitelist: Set[String] = Set.empty)(
+  def apply[R[_] <: Request[_]](rateLimiter: RateLimiter, rejectResponse: R[_] => Future[Result], errorCodes: Set[Int] = (400 to 499).toSet, ipWhitelist: Set[String] = Set.empty)(
     implicit ec: ExecutionContext
   ): FailureRateLimitFunction[R] =
-    new FailureRateLimitFunction[R](rateLimiter)(
-      rejectResponse,
-      _.remoteAddress,
-      r => !errorCodes.contains(r.header.status),
-      req => ipWhitelist.contains(req.remoteAddress)
-    )
+    new FailureRateLimitFunction[R](rateLimiter, _.remoteAddress, r => !errorCodes.contains(r.header.status), rejectResponse, req => ipWhitelist.contains(req.remoteAddress))
 }
 
 /**
@@ -109,17 +104,18 @@ object HttpErrorRateLimitFunction {
  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
  *
  * @param rateLimiter
- * @param rejectResponse
  * @param keyFromRequest
  * @param resultCheck
+ * @param rejectResponse
  * @param bypass
  * @param executionContext
  * @tparam R
  */
-class FailureRateLimitFunction[R[_] <: Request[_]](rateLimiter: RateLimiter)(
-  rejectResponse: R[_] => Future[Result],
+class FailureRateLimitFunction[R[_] <: Request[_]](
+  rateLimiter: RateLimiter,
   keyFromRequest: R[_] => Any,
   resultCheck: Result => Boolean,
+  rejectResponse: R[_] => Future[Result],
   bypass: R[_] => Boolean = (_: R[_]) => false
 )(implicit val executionContext: ExecutionContext)
     extends ActionFunction[R, R] {
