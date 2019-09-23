@@ -21,10 +21,12 @@ object KeyRateLimitFilter {
    * @tparam R
    * @return
    */
-  def apply[K, R[_] <: Request[_]](rateLimiter: RateLimiter, rejectResponse: (K, R[_]) => Future[Result], bypass: (K, R[_]) => Boolean = (_: K, _: R[_]) => false)(bucketKey: K)(
+  def apply[K, R[_] <: Request[_]](rateLimiter: RateLimiter, rejectResponse: K => R[_] => Future[Result], bypass: K => R[_] => Boolean = (_: K) => (_: R[_]) => false)(
+    bucketKey: K
+  )(
     implicit ec: ExecutionContext
   ): RateLimitActionFilter[R] =
-    new RateLimitActionFilter[R](rateLimiter, _ => bucketKey, rejectResponse(bucketKey, _), bypass(bucketKey, _))
+    new RateLimitActionFilter[R](rateLimiter, _ => bucketKey, rejectResponse(bucketKey), bypass(bucketKey))
 }
 
 object IpRateLimitFilter {

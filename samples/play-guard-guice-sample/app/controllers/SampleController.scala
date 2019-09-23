@@ -32,10 +32,10 @@ class SampleController @Inject()(components: ControllerComponents)(implicit syst
   }
 
   // allow 4 requests immediately and get a new token every 15 seconds
-  private val keyRateLimitFilter: (String) => RateLimitActionFilter[Request] =
+  private val keyRateLimitFilter: String => RateLimitActionFilter[Request] =
     KeyRateLimitFilter[String, Request](
       new RateLimiter(4, 1f / 15, "test by token"),
-      (key, _) => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded"""))
+      key => _ => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded"""))
     )
 
   def limitedByKey(key: String): Action[AnyContent] =
