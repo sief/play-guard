@@ -27,7 +27,7 @@ Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 
 For Play 2.7.x:
 ```scala
-  "com.digitaltangible" %% "play-guard" % "2.3.0"
+  "com.digitaltangible" %% "play-guard" % "2.4.0"
 ```
 
 
@@ -65,7 +65,7 @@ Action function/filter for request and failure rate limiting specific actions. Y
 The rate limit functions/filters all take a RateLimiter instance as the first parameter:
 
 ```scala
- class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock)
+  class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock)
 ```
 
 It holds the token bucket group with the specified size and rate and can be shared between actions if you want to use the same bucket group for various actions.
@@ -78,21 +78,25 @@ It holds the token bucket group with the specified size and rate and can be shar
 There is a general ActionFilter for handling any type of request so you can chain it behind you own ActionTransformer:
 
 ```scala
-/**
-  * ActionFilter which holds a RateLimiter with a bucket for each key returned by function f.
-  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
-  *
-  * @param rl
-  * @param rejectResponse
-  * @param f
-  * @tparam R
-  * @param executionContext
-  * @return
-  */
-class RateLimitActionFilter[R[_] <: Request[_]](rl: RateLimiter)(
-  rejectResponse: R[_] => Future[Result], 
-  f: R[_] => Any
-)(implicit val executionContext: ExecutionContext) extends ActionFilter[R]
+    /**
+     * ActionFilter which holds a RateLimiter with a bucket for each key returned by function f.
+     * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
+     *
+     * @param rateLimiter
+     * @param keyFromRequest
+     * @param rejectResponse
+     * @param bypass
+     * @param executionContext
+     * @tparam R
+     */
+    class RateLimitActionFilter[R[_] <: Request[_]](
+      rateLimiter: RateLimiter,
+      keyFromRequest: R[_] => Any,
+      rejectResponse: R[_] => Future[Result],
+      bypass: R[_] => Boolean = (_: R[_]) => false
+    )(
+      implicit val executionContext: ExecutionContext
+    ) extends ActionFilter[R]
 ```
 
 There are also two convenience filters:
@@ -101,12 +105,13 @@ __IP address as key__ (from the sample app):
 
 ```scala
   // allow 3 requests immediately and get a new token every 5 seconds
-  private val ipRateLimitFilter = IpRateLimitFilter[Request](new RateLimiter(3, 1f / 5, "test limit by IP address")) {
-    implicit r: RequestHeader =>
+  private val ipRateLimitFilter = IpRateLimitFilter[Request](
+    new RateLimiter(3, 1f / 5, "test limit by IP address"), { r: RequestHeader =>
       Future.successful(TooManyRequests(s"""rate limit for ${r.remoteAddress} exceeded"""))
-  }
+    }
+  )
 
-  def limitedByIp = (Action andThen ipRateLimitFilter) {
+  def limitedByIp: Action[AnyContent] = (Action andThen ipRateLimitFilter) {
     Ok("limited by IP")
   }
 ```
@@ -115,11 +120,14 @@ __Action parameter as key__ (from the sample app):
 
 ```scala
   // allow 4 requests immediately and get a new token every 15 seconds
-  private val keyRateLimitFilter =
-    KeyRateLimitFilter[Request](new RateLimiter(4, 1f / 15, "test by token")) _
+  private val keyRateLimitFilter: String => RateLimitActionFilter[Request] =
+    KeyRateLimitFilter[String, Request](
+      new RateLimiter(4, 1f / 15, "test by token"),
+      key => _ => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded"""))
+    )
 
-  def limitedByKey(key: String) =
-    (Action andThen keyRateLimitFilter(_ => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded""")), key)) {
+  def limitedByKey(key: String): Action[AnyContent] =
+    (Action andThen keyRateLimitFilter(key)) {
       Ok("limited by token")
     }
 ```
@@ -130,24 +138,27 @@ __Action parameter as key__ (from the sample app):
 There is a general ActionFunction for handling any type of request so you can chain it behind your own ActionTransformer and determine failure from the Result:
 
 ```scala
-/**
-  * ActionFunction which holds a RateLimiter with a bucket for each key returned by function keyFromRequest.
-  * Tokens are consumed only by failures determined by function resultCheck. If no tokens remain, requests with this key are rejected.
-  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
-  *
-  * @param rl
-  * @param rejectResponse
-  * @param keyFromRequest
-  * @param resultCheck
-  * @param executionContext
-  * @tparam R
-  */
-class FailureRateLimitFunction[R[_] <: Request[_]](rl: RateLimiter)(
-  rejectResponse: R[_] => Future[Result],
-  keyFromRequest: R[_] => Any,
-  resultCheck: Result => Boolean
-)(implicit val executionContext: ExecutionContext)
-    extends ActionFunction[R, R] 
+    /**
+     * ActionFunction which holds a RateLimiter with a bucket for each key returned by function keyFromRequest.
+     * Tokens are consumed only by failures determined by function resultCheck. If no tokens remain, requests with this key are rejected.
+     * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
+     *
+     * @param rateLimiter
+     * @param keyFromRequest
+     * @param resultCheck
+     * @param rejectResponse
+     * @param bypass
+     * @param executionContext
+     * @tparam R
+     */
+    class FailureRateLimitFunction[R[_] <: Request[_]](
+      rateLimiter: RateLimiter,
+      keyFromRequest: R[_] => Any,
+      resultCheck: Result => Boolean,
+      rejectResponse: R[_] => Future[Result],
+      bypass: R[_] => Boolean = (_: R[_]) => false
+    )(implicit val executionContext: ExecutionContext)
+        extends ActionFunction[R, R]
 ```
 
 The convenience action HttpErrorRateLimitAction __limits the HTTP error rate for each IP address__. This is for example useful if you want to prevent brute force bot attacks on authentication requests.
@@ -156,12 +167,10 @@ From the sample app:
 
 ```scala
   // allow 2 failures immediately and get a new token every 10 seconds
-  private val httpErrorRateLimitFunction = HttpErrorRateLimitFunction[Request](new RateLimiter(2, 1f / 10, "test failure rate limit")) {
-    implicit r: RequestHeader =>
-      Future.successful(BadRequest("failure rate exceeded"))
-  }
+  private val httpErrorRateLimitFunction =
+    HttpErrorRateLimitFunction[Request](new RateLimiter(2, 1f / 10, "test failure rate limit"), _ => Future.successful(BadRequest("failure rate exceeded")))
 
-  def failureLimitedByIp(fail: Boolean) =
+  def failureLimitedByIp(fail: Boolean): Action[AnyContent] =
     (Action andThen httpErrorRateLimitFunction) {
       if (fail) BadRequest("failed")
       else Ok("Ok")
