@@ -1,6 +1,3 @@
-import play.sbt.Play.autoImport._
-import sbt._
-
 name := """play-guard-guice-sample"""
 
 version := "1.1-SNAPSHOT"
