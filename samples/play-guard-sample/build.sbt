@@ -7,6 +7,6 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 scalaVersion := "2.13.1"
 
 libraryDependencies ++= Seq(
-  "com.digitaltangible" %% "play-guard" % "2.4.0"
+  "com.digitaltangible" %% "play-guard" % "2.5.0"
 
 )

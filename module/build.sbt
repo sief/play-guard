@@ -2,11 +2,11 @@ name := """play-guard"""
 
 organization := """com.digitaltangible"""
 
-version := "2.5.0-SNAPSHOT"
+version := "2.5.0"
 
-scalaVersion := "2.12.10"
+scalaVersion := "2.12.11"
 
-crossScalaVersions := Seq("2.13.1", "2.12.10", "2.11.12")
+crossScalaVersions := Seq("2.13.1", "2.12.11")
 
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
@@ -17,8 +17,8 @@ scalacOptions ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+  "org.scalatestplus.play" %% "scalatestplus-play" % "5.0.0" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.14.3" % "test"
 )
 
 
