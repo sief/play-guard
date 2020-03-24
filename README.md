@@ -25,6 +25,11 @@ Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 
 ## Getting play-guard
 
+For Play 2.8.x:
+```scala
+  "com.digitaltangible" %% "play-guard" % "2.5.0"
+```
+
 For Play 2.7.x:
 ```scala
   "com.digitaltangible" %% "play-guard" % "2.4.0"
