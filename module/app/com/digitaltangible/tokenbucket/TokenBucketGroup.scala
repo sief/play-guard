@@ -8,7 +8,7 @@ package com.digitaltangible.tokenbucket
  * @param rate  refill rate in tokens per second
  * @param clock for mocking the current time.
  */
-class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock) extends Serializable {
+class TokenBucketGroup(val size: Long, val rate: Double, clock: Clock = CurrentTimeClock) extends Serializable {
 
   private val NanosPerSecond = 1000000000
 
@@ -30,6 +30,7 @@ class TokenBucketGroup(size: Long, rate: Double, clock: Clock = CurrentTimeClock
   /**
    * First refills all buckets at the given rate, then tries to consume the required amount.
    * If no bucket exists for the given key, a new full one is created.
+   *
    * @param key
    * @param required number of tokens to consume
    * @return
