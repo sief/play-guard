@@ -149,7 +149,7 @@ class FailureRateLimitFunction[R[_] <: Request[_]](
  * @param logPrefix
  * @param clock
  */
-class RateLimiter(size: Int, rate: Float, logPrefix: String = "", clock: Clock = CurrentTimeClock) extends Serializable {
+class RateLimiter(val size: Long, val rate: Double, logPrefix: String = "", clock: Clock = CurrentTimeClock) extends Serializable {
 
   @transient private lazy val logger = Logger(this.getClass)
 
