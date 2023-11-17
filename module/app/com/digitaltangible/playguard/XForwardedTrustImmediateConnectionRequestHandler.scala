@@ -1,14 +1,13 @@
 package com.digitaltangible.playguard
 
-import java.net.InetAddress
-
-import javax.inject.Inject
 import play.api.http._
 import play.api.mvc.request.RemoteConnection
 import play.api.mvc.{EssentialFilter, Handler, Headers, RequestHeader}
 import play.api.routing.Router
 import play.core.DefaultWebCommands
 
+import java.net.InetAddress
+import javax.inject.{Inject, Provider}
 import scala.util.Try
 
 /**
@@ -22,11 +21,11 @@ import scala.util.Try
  * @param configuration
  * @param filters
  */
-class XForwardedTrustImmediateConnectionRequestHandler @Inject()(
-  router: Router,
-  errorHandler: HttpErrorHandler,
-  configuration: HttpConfiguration,
-  filters: Seq[EssentialFilter]
+class XForwardedTrustImmediateConnectionRequestHandler @Inject() (
+    router: Provider[Router],
+    errorHandler: HttpErrorHandler,
+    configuration: HttpConfiguration,
+    filters: Seq[EssentialFilter]
 ) extends DefaultHttpRequestHandler(
       new DefaultWebCommands,
       None,
@@ -43,7 +42,7 @@ class XForwardedTrustImmediateConnectionRequestHandler @Inject()(
   private def getTrustedXForwardedFor(headers: Headers): Option[RemoteConnection] =
     for {
       lastForAddr <- h(headers, X_FORWARDED_FOR).lastOption
-      inetAddr <- Try(InetAddress.getByName(lastForAddr)).toOption
+      inetAddr    <- Try(InetAddress.getByName(lastForAddr)).toOption
       lastProtoO = h(headers, X_FORWARDED_PROTO).lastOption
     } yield RemoteConnection(inetAddr, lastProtoO.map(_.toLowerCase).contains("https"), None)
 

@@ -1,11 +1,14 @@
 package com.digitaltangible.playguard
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import com.digitaltangible.FakeClock
 import org.scalatest.MustMatchers
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Configuration
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.test.FakeRequest
@@ -15,15 +18,15 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite with MustMatchers {
 
-  implicit lazy val system = app.actorSystem
+  implicit lazy val system: ActorSystem = app.actorSystem
 
-  implicit lazy val materializer = app.materializer
+  implicit lazy val materializer: Materializer = app.materializer
 
-  implicit lazy val conf = app.configuration
+  implicit lazy val conf: Configuration = app.configuration
 
-  implicit lazy val ec = app.injector.instanceOf[ExecutionContext]
+  implicit lazy val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  lazy val bodyParsers = app.injector.instanceOf[PlayBodyParsers]
+  lazy val bodyParsers: PlayBodyParsers = app.injector.instanceOf[PlayBodyParsers]
 
   lazy val actionBuilder: DefaultActionBuilder = DefaultActionBuilder(bodyParsers.anyContent)
 

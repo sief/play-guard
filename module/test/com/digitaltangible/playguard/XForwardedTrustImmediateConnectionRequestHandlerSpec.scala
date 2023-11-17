@@ -8,10 +8,14 @@ import play.api.mvc.request.RemoteConnection
 import play.api.routing.Router
 import play.api.test.FakeRequest
 
+import javax.inject.Provider
+
 class XForwardedTrustImmediateConnectionRequestHandlerSpec extends PlaySpec with MustMatchers {
 
   val handler = new XForwardedTrustImmediateConnectionRequestHandler(
-    Router.empty,
+    new Provider[Router]() {
+      override def get(): Router = Router.empty
+    },
     DefaultHttpErrorHandler,
     HttpConfiguration(),
     Nil
@@ -42,8 +46,8 @@ class XForwardedTrustImmediateConnectionRequestHandlerSpec extends PlaySpec with
     "get remote connection from multiple headers in different cases" in {
       val req = FakeRequest().withHeaders(
         Headers(
-          "X-Forwarded-For" -> "1.1.1.1",
-          "x-forwarded-for" -> "2.2.2.2",
+          "X-Forwarded-For"   -> "1.1.1.1",
+          "x-forwarded-for"   -> "2.2.2.2",
           "x-forwarded-proto" -> "http",
           "X-Forwarded-Proto" -> "https"
         )

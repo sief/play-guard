@@ -4,15 +4,15 @@ organization := """com.digitaltangible"""
 
 version := "2.6.0-SNAPSHOT"
 
-scalaVersion := "2.12.11"
+scalaVersion := "2.13.12"
 
-crossScalaVersions := Seq("2.13.1", "2.12.11")
-
+// crossScalaVersions := Seq("2.13.12", "3.3.1")
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalacOptions ++= Seq(
   "-feature",
+  "-Xfatal-warnings",
   "-language:higherKinds"
 )
 
