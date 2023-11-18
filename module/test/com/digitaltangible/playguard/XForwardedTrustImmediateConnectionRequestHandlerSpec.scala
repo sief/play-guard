@@ -1,6 +1,5 @@
 package com.digitaltangible.playguard
 
-import org.scalatest.MustMatchers
 import org.scalatestplus.play.PlaySpec
 import play.api.http.{DefaultHttpErrorHandler, HttpConfiguration}
 import play.api.mvc.Headers
@@ -10,7 +9,7 @@ import play.api.test.FakeRequest
 
 import javax.inject.Provider
 
-class XForwardedTrustImmediateConnectionRequestHandlerSpec extends PlaySpec with MustMatchers {
+class XForwardedTrustImmediateConnectionRequestHandlerSpec extends PlaySpec {
 
   val handler = new XForwardedTrustImmediateConnectionRequestHandler(
     new Provider[Router]() {
