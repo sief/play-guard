@@ -77,6 +77,16 @@ abstract class RateLimitActionFilter[R[_] <: Request[_]](rateLimiter: RateLimite
   }
 }
 
+/**
+ * Creates an ActionFunction which holds a RateLimiter with a bucket for each IP address.
+ * Tokens are consumed only by failures determined by HTTP error codes. If no tokens remain, the request is rejected.
+ *
+ * @param rateLimiter
+ * @param errorCodes
+ * @param ipWhitelist
+ * @param ec
+ * @tparam R
+ */
 abstract class HttpErrorRateLimitFunction[R[_] <: Request[_]](
     rateLimiter: RateLimiter,
     errorCodes: Set[Int] = (400 to 499).toSet,
