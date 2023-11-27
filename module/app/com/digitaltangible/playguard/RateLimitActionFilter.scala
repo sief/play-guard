@@ -23,11 +23,11 @@ abstract class KeyRateLimitFilter[K, R[_] <: Request[_]](rateLimiter: RateLimite
   def bypass4Key[A](key: K): R[A] => Boolean = (_: R[A]) => false
 
   def apply(key: K): RateLimitActionFilter[R] = new RateLimitActionFilter[R](rateLimiter) {
-    override def keyFromRequest[A](request: R[A]): Any = key
+    override def keyFromRequest[A](implicit request: R[A]): Any = key
 
-    override def rejectResponse[A](request: R[A]): Future[Result] = rejectResponse4Key(key)(request)
+    override def rejectResponse[A](implicit request: R[A]): Future[Result] = rejectResponse4Key(key)(request)
 
-    override def bypass[A](request: R[A]): Boolean = bypass4Key(key)(request)
+    override def bypass[A](implicit request: R[A]): Boolean = bypass4Key(key)(request)
   }
 }
 
@@ -43,9 +43,9 @@ abstract class IpRateLimitFilter[R[_] <: Request[_]](rateLimiter: RateLimiter, i
     implicit ec: ExecutionContext
 ) extends RateLimitActionFilter[R](rateLimiter) {
 
-  override def keyFromRequest[A](request: R[A]): String = request.remoteAddress
+  override def keyFromRequest[A](implicit request: R[A]): String = request.remoteAddress
 
-  override def bypass[A](request: R[A]): Boolean = ipWhitelist.contains(request.remoteAddress)
+  override def bypass[A](implicit request: R[A]): Boolean = ipWhitelist.contains(request.remoteAddress)
 }
 
 /**
@@ -61,11 +61,11 @@ abstract class RateLimitActionFilter[R[_] <: Request[_]](rateLimiter: RateLimite
 
   private val logger: Logger = Logger(this.getClass)
 
-  def keyFromRequest[A](request: R[A]): Any
+  def keyFromRequest[A](implicit request: R[A]): Any
 
-  def rejectResponse[A](request: R[A]): Future[Result]
+  def rejectResponse[A](implicit request: R[A]): Future[Result]
 
-  def bypass[A](request: R[A]): Boolean = false
+  def bypass[A](implicit request: R[A]): Boolean = false
 
   def filter[A](request: R[A]): Future[Option[Result]] = {
     val key: Any = keyFromRequest(request)
@@ -95,9 +95,9 @@ abstract class HttpErrorRateLimitFunction[R[_] <: Request[_]](
     implicit ec: ExecutionContext
 ) extends FailureRateLimitFunction[R](rateLimiter, r => !errorCodes.contains(r.header.status)) {
 
-  override def keyFromRequest[A](request: R[A]): String = request.remoteAddress
+  override def keyFromRequest[A](implicit request: R[A]): String = request.remoteAddress
 
-  override def bypass[A](request: R[A]): Boolean = ipWhitelist.contains(request.remoteAddress)
+  override def bypass[A](implicit request: R[A]): Boolean = ipWhitelist.contains(request.remoteAddress)
 }
 
 /**
@@ -121,11 +121,11 @@ abstract class FailureRateLimitFunction[R[_] <: Request[_]](
 
   private val logger: Logger = Logger(this.getClass)
 
-  def keyFromRequest[A](request: R[A]): Any
+  def keyFromRequest[A](implicit request: R[A]): Any
 
-  def rejectResponse[A](request: R[A]): Future[Result]
+  def rejectResponse[A](implicit request: R[A]): Future[Result]
 
-  def bypass[A](request: R[A]): Boolean = false
+  def bypass[A](implicit request: R[A]): Boolean = false
 
   def invokeBlock[A](request: R[A], block: R[A] => Future[Result]): Future[Result] = {
     val key: Any = keyFromRequest(request)
