@@ -1,12 +1,12 @@
 package com.digitaltangible.ratelimit
 
 import com.digitaltangible.FakeClock
-import org.scalatestplus.play.PlaySpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 
-class RateLimiterSpec extends PlaySpec with GuiceOneAppPerSuite {
+class RateLimiterSpec extends AnyWordSpec with Matchers {
 
   "RateLimiter" should {
     "consumeAndCheck for rate limiting" in {
