@@ -6,14 +6,13 @@ version := "2.6.0-SNAPSHOT"
 
 scalaVersion := "2.13.12"
 
-// crossScalaVersions := Seq("2.13.12", "3.3.1")
+crossScalaVersions := Seq("2.13.12", "3.3.1")
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalacOptions ++= Seq(
   "-feature",
-  "-Xfatal-warnings",
-  "-language:higherKinds"
+  "-Xfatal-warnings"
 )
 
 libraryDependencies ++= Seq(

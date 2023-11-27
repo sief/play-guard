@@ -29,9 +29,9 @@ class DefaultIpChecker @Inject()(conf: Configuration) extends IpChecker {
 }
 
 trait TokenBucketGroupProvider {
-  val tokenBucketSize: Int
-  val tokenBucketRate: Int
-  val tokenBucketGroup: TokenBucketGroup
+  def tokenBucketSize: Int
+  def tokenBucketRate: Int
+  def tokenBucketGroup: TokenBucketGroup
 }
 
 trait DefaultTokenBucketGroupProvider extends TokenBucketGroupProvider {

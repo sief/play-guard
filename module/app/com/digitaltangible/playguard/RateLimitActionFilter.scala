@@ -6,72 +6,69 @@ import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object KeyRateLimitFilter {
+/**
+ * ActionFilter which holds a RateLimiter with a bucket for each key.
+ * Every request consumes a token. If no tokens remain, the request is rejected.
 
-  /**
-   * Creates an ActionFilter which holds a RateLimiter with a bucket for each key.
-   * Every request consumes a token. If no tokens remain, the request is rejected.
-   *
-   * @param rateLimiter
-   * @param rejectResponse
-   * @param bypass
-   * @param bucketKey
-   * @param ec
-   * @tparam K
-   * @tparam R
-   * @return
-   */
-  def apply[K, R[_] <: Request[_]](rateLimiter: RateLimiter, rejectResponse: K => R[_] => Future[Result], bypass: K => R[_] => Boolean = (_: K) => (_: R[_]) => false)(
-    bucketKey: K
-  )(
+ * @param rateLimiter
+ * @param ec
+ * @tparam K
+ * @tparam R
+ */
+abstract class KeyRateLimitFilter[K, R[_] <: Request[_]](rateLimiter: RateLimiter)(
     implicit ec: ExecutionContext
-  ): RateLimitActionFilter[R] =
-    new RateLimitActionFilter[R](rateLimiter, _ => bucketKey, rejectResponse(bucketKey), bypass(bucketKey))
-}
+) {
+  def rejectResponse4Key[A](key: K): R[A] => Future[Result]
 
-object IpRateLimitFilter {
+  def bypass4Key[A](key: K): R[A] => Boolean = (_: R[A]) => false
 
-  /**
-   * Creates an ActionFilter which holds a RateLimiter with a bucket for each IP address.
-   * Every request consumes a token. If no tokens remain, the request is rejected.
-   *
-   * @param rateLimiter
-   * @param rejectResponse
-   * @param ipWhitelist
-   * @param ec
-   * @tparam R
-   * @return
-   */
-  def apply[R[_] <: Request[_]](rateLimiter: RateLimiter, rejectResponse: R[_] => Future[Result], ipWhitelist: Set[String] = Set.empty)(
-    implicit ec: ExecutionContext
-  ): RateLimitActionFilter[R] =
-    new RateLimitActionFilter[R](rateLimiter, _.remoteAddress, rejectResponse, req => ipWhitelist.contains(req.remoteAddress))
+  def apply(key: K): RateLimitActionFilter[R] = new RateLimitActionFilter[R](rateLimiter) {
+    override def keyFromRequest[A](request: R[A]): Any = key
+
+    override def rejectResponse[A](request: R[A]): Future[Result] = rejectResponse4Key(key)(request)
+
+    override def bypass[A](request: R[A]): Boolean = bypass4Key(key)(request)
+  }
 }
 
 /**
- * ActionFilter which holds a RateLimiter with a bucket for each key returned by function f.
+ * ActionFilter which holds a RateLimiter with a bucket for each IP address.
+ * Every request consumes a token. If no tokens remain, the request is rejected.
+ * @param rateLimiter
+ * @param ipWhitelist
+ * @param ec
+ * @tparam R
+ */
+abstract class IpRateLimitFilter[R[_] <: Request[_]](rateLimiter: RateLimiter, ipWhitelist: Set[String] = Set.empty)(
+    implicit ec: ExecutionContext
+) extends RateLimitActionFilter[R](rateLimiter) {
+
+  override def keyFromRequest[A](request: R[A]): String = request.remoteAddress
+
+  override def bypass[A](request: R[A]): Boolean = ipWhitelist.contains(request.remoteAddress)
+}
+
+/**
+ * ActionFilter which holds a RateLimiter with a bucket for each key returned by `keyFromRequest`.
  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
  *
  * @param rateLimiter
- * @param keyFromRequest
- * @param rejectResponse
- * @param bypass
- * @param executionContext
  * @tparam R
  */
-class RateLimitActionFilter[R[_] <: Request[_]](
-  rateLimiter: RateLimiter,
-  keyFromRequest: R[_] => Any,
-  rejectResponse: R[_] => Future[Result],
-  bypass: R[_] => Boolean = (_: R[_]) => false
-)(
-  implicit val executionContext: ExecutionContext
+abstract class RateLimitActionFilter[R[_] <: Request[_]](rateLimiter: RateLimiter)(
+    implicit val executionContext: ExecutionContext
 ) extends ActionFilter[R] {
 
-  private val logger = Logger(this.getClass)
+  private val logger: Logger = Logger(this.getClass)
+
+  def keyFromRequest[A](request: R[A]): Any
+
+  def rejectResponse[A](request: R[A]): Future[Result]
+
+  def bypass[A](request: R[A]): Boolean = false
 
   def filter[A](request: R[A]): Future[Option[Result]] = {
-    val key = keyFromRequest(request)
+    val key: Any = keyFromRequest(request)
     if (bypass(request) || rateLimiter.consumeAndCheck(key)) Future.successful(None)
     else {
       logger.warn(s"${request.method} ${request.uri} rejected, rate limit for $key exceeded.")
@@ -80,24 +77,17 @@ class RateLimitActionFilter[R[_] <: Request[_]](
   }
 }
 
-object HttpErrorRateLimitFunction {
-
-  /**
-   * Creates an ActionFunction which holds a RateLimiter with a bucket for each IP address.
-   * Tokens are consumed only by failures determined by HTTP error codes. If no tokens remain, the request is rejected.
-   *
-   * @param rateLimiter
-   * @param rejectResponse
-   * @param errorCodes
-   * @param ipWhitelist
-   * @param ec
-   * @tparam R
-   * @return
-   */
-  def apply[R[_] <: Request[_]](rateLimiter: RateLimiter, rejectResponse: R[_] => Future[Result], errorCodes: Set[Int] = (400 to 499).toSet, ipWhitelist: Set[String] = Set.empty)(
+abstract class HttpErrorRateLimitFunction[R[_] <: Request[_]](
+    rateLimiter: RateLimiter,
+    errorCodes: Set[Int] = (400 to 499).toSet,
+    ipWhitelist: Set[String] = Set.empty
+)(
     implicit ec: ExecutionContext
-  ): FailureRateLimitFunction[R] =
-    new FailureRateLimitFunction[R](rateLimiter, _.remoteAddress, r => !errorCodes.contains(r.header.status), rejectResponse, req => ipWhitelist.contains(req.remoteAddress))
+) extends FailureRateLimitFunction[R](rateLimiter, r => !errorCodes.contains(r.header.status)) {
+
+  override def keyFromRequest[A](request: R[A]): String = request.remoteAddress
+
+  override def bypass[A](request: R[A]): Boolean = ipWhitelist.contains(request.remoteAddress)
 }
 
 /**
@@ -113,24 +103,27 @@ object HttpErrorRateLimitFunction {
  * @param executionContext
  * @tparam R
  */
-class FailureRateLimitFunction[R[_] <: Request[_]](
-  rateLimiter: RateLimiter,
-  keyFromRequest: R[_] => Any,
-  resultCheck: Result => Boolean,
-  rejectResponse: R[_] => Future[Result],
-  bypass: R[_] => Boolean = (_: R[_]) => false
+abstract class FailureRateLimitFunction[R[_] <: Request[_]](
+    rateLimiter: RateLimiter,
+    resultCheck: Result => Boolean,
 )(implicit val executionContext: ExecutionContext)
     extends ActionFunction[R, R] {
 
-  private val logger = Logger(this.getClass)
+  private val logger: Logger = Logger(this.getClass)
 
-  def invokeBlock[A](request: R[A], block: (R[A]) => Future[Result]): Future[Result] = {
-    val key = keyFromRequest(request)
+  def keyFromRequest[A](request: R[A]): Any
+
+  def rejectResponse[A](request: R[A]): Future[Result]
+
+  def bypass[A](request: R[A]): Boolean = false
+
+  def invokeBlock[A](request: R[A], block: R[A] => Future[Result]): Future[Result] = {
+    val key: Any = keyFromRequest(request)
     if (bypass(request)) {
       block(request)
     } else if (rateLimiter.check(key)) {
-      val res = block(request)
-      res.map { res =>
+      val res: Future[Result] = block(request)
+      res.map { (res: Result) =>
         if (!resultCheck(res)) rateLimiter.consume(key)
         res
       }
