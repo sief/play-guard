@@ -19,10 +19,7 @@ class ApplicationComponents(context: Context)
     with PlayGuardComponents
     with AssetsComponents {
 
-  lazy val controller = new SampleController(controllerComponents)(
-    actorSystem,
-    executionContext,
-    configuration)
+  private lazy val controller = new SampleController(controllerComponents)(executionContext)
 
   lazy val router = new Routes(httpErrorHandler, controller, assets)
 
