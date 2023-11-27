@@ -4,6 +4,16 @@ import play.api.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
 
+/**
+ * Generic failure rate limiter.
+ * @param rateLimiter
+ * @param keyFromContext
+ * @param resultCheck
+ * @param rejectResponse
+ * @param logPrefix
+ * @tparam C
+ * @tparam E
+ */
 class FailureRateLimiter[C, E](
     rateLimiter: RateLimiter,
     keyFromContext: C => Any,
