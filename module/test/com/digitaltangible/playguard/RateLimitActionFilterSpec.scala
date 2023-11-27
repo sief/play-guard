@@ -81,6 +81,30 @@ class RateLimitActionFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
     }
   }
 
+  "KeyRateLimitFilter" should {
+    "limit request rate" in {
+      val fakeClock: FakeClock = new FakeClock
+      val rl: RateLimiter      = new RateLimiter(2, 2, "test", fakeClock)
+      val keyRateLimitFilter: KeyRateLimitFilter[Int, Request] = new KeyRateLimitFilter[Int, Request](rl) {
+        override def rejectResponse4Key[A](key: Int): Request[A] => Future[Result] =
+          _ => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded"""))
+      }
+      def action(key: Int): Action[AnyContent]         = (actionBuilder andThen keyRateLimitFilter(key)) { Ok("ok") }
+      val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest(GET, "/")
+      var result: Future[Result]                       = call(action(1), request)
+      status(result) mustEqual OK
+      result = call(action(1), request)
+      status(result) mustEqual OK
+      result = call(action(2), request)
+      status(result) mustEqual OK
+      result = call(action(1), request)
+      status(result) mustEqual TOO_MANY_REQUESTS
+      fakeClock.ts = 501000000
+      result = call(action(1), request)
+      status(result) mustEqual OK
+    }
+  }
+
   "FailureRateLimitFunction" should {
     "limit failure rate" in {
       val fakeClock: FakeClock = new FakeClock

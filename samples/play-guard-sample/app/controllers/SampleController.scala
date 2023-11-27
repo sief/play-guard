@@ -1,6 +1,7 @@
 package controllers
 
 import com.digitaltangible.playguard._
+import com.digitaltangible.ratelimit.RateLimiter
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
