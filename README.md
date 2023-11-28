@@ -75,7 +75,7 @@ Action function/filter for request and failure rate limiting specific actions. Y
 The rate limit functions/filters all take a RateLimiter instance as the first parameter:
 
 ```scala
-  class RateLimiter(val size: Long, val rate: Double, logPrefix: String = "", clock: Clock = CurrentTimeClock)
+class RateLimiter(val size: Long, val rate: Double, logPrefix: String = "", clock: Clock = CurrentTimeClock)
 ```
 
 It holds the token bucket group with the specified size and rate and can be shared between actions if you want to use the same bucket group for various actions.
@@ -88,25 +88,25 @@ It holds the token bucket group with the specified size and rate and can be shar
 There is a general ActionFilter for handling any type of request so you can chain it behind you own ActionTransformer:
 
 ```scala
-    /**
-     * ActionFilter which holds a RateLimiter with a bucket for each key returned by `keyFromRequest`.
-     * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
-     *
-     * @param rateLimiter
-     * @tparam R
-     */
-    abstract class RateLimitActionFilter[R[_] <: Request[_]](rateLimiter: RateLimiter)(
-      implicit val executionContext: ExecutionContext
-    ) extends ActionFilter[R] {
+/**
+ * ActionFilter which holds a RateLimiter with a bucket for each key returned by `keyFromRequest`.
+ * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
+ *
+ * @param rateLimiter
+ * @tparam R
+ */
+abstract class RateLimitActionFilter[R[_] <: Request[_]](rateLimiter: RateLimiter)(
+  implicit val executionContext: ExecutionContext
+) extends ActionFilter[R] {
+
+  def keyFromRequest[A](implicit request: R[A]): Any
+
+  def rejectResponse[A](implicit request: R[A]): Future[Result]
+
+  def bypass[A](implicit request: R[A]): Boolean = false
   
-      def keyFromRequest[A](implicit request: R[A]): Any
-    
-      def rejectResponse[A](implicit request: R[A]): Future[Result]
-    
-      def bypass[A](implicit request: R[A]): Boolean = false
-      
-      // ...
-    }
+  // ...
+}
 ```
 
 There are also two convenience filters:
@@ -114,31 +114,31 @@ There are also two convenience filters:
 __IP address as key__ (from the sample app):
 
 ```scala
-  // allow 3 requests immediately and get a new token every 5 seconds
-    private val ipRateLimitFilter: IpRateLimitFilter[Request] = new IpRateLimitFilter[Request](new RateLimiter(3, 1f / 5, "test limit by IP address")) {
-      override def rejectResponse[A](implicit request: Request[A]): Future[Result] =
-        Future.successful(TooManyRequests(s"""rate limit for ${request.remoteAddress} exceeded"""))
-    }
-    
-    def limitedByIp: Action[AnyContent] = (Action andThen ipRateLimitFilter) {
-      Ok("limited by IP")
-    }
+// allow 3 requests immediately and get a new token every 5 seconds
+private val ipRateLimitFilter: IpRateLimitFilter[Request] = new IpRateLimitFilter[Request](new RateLimiter(3, 1f / 5, "test limit by IP address")) {
+  override def rejectResponse[A](implicit request: Request[A]): Future[Result] =
+    Future.successful(TooManyRequests(s"""rate limit for ${request.remoteAddress} exceeded"""))
+}
+
+def limitedByIp: Action[AnyContent] = (Action andThen ipRateLimitFilter) {
+  Ok("limited by IP")
+}
 ```
 
 __Action parameter as key__ (from the sample app):
 
 ```scala
-  // allow 4 requests immediately and get a new token every 15 seconds
-    private val keyRateLimitFilter: KeyRateLimitFilter[String, Request] =
-      new KeyRateLimitFilter[String, Request](new RateLimiter(4, 1f / 15, "test by token")) {
-        override def rejectResponse4Key[A](key: String): Request[A] => Future[Result] =
-          _ => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded"""))
-      }
-    
-    def limitedByKey(key: String): Action[AnyContent] =
-      (Action andThen keyRateLimitFilter(key)) {
-        Ok("limited by token")
-      }
+// allow 4 requests immediately and get a new token every 15 seconds
+private val keyRateLimitFilter: KeyRateLimitFilter[String, Request] =
+  new KeyRateLimitFilter[String, Request](new RateLimiter(4, 1f / 15, "test by token")) {
+    override def rejectResponse4Key[A](key: String): Request[A] => Future[Result] =
+      _ => Future.successful(TooManyRequests(s"""rate limit for '$key' exceeded"""))
+  }
+
+def limitedByKey(key: String): Action[AnyContent] =
+  (Action andThen keyRateLimitFilter(key)) {
+    Ok("limited by token")
+  }
 ```
 
 1.2 Error rate limit
@@ -147,30 +147,30 @@ __Action parameter as key__ (from the sample app):
 There is a general ActionFunction for handling any type of request so you can chain it behind your own ActionTransformer and determine failure from the Result:
 
 ```scala
-    /**
-     * ActionFunction which holds a RateLimiter with a bucket for each key returned by method keyFromRequest.
-     * Tokens are consumed only by failures determined by function resultCheck. If no tokens remain, requests with this key are rejected.
-     * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
-     *
-     * @param rateLimiter
-     * @param resultCheck
-     * @param executionContext
-     * @tparam R
-     */
-    abstract class FailureRateLimitFunction[R[_] <: Request[_]](
-         rateLimiter: RateLimiter,
-         resultCheck: Result => Boolean,
-    )(implicit val executionContext: ExecutionContext)
-      extends ActionFunction[R, R] {
-    
-      def keyFromRequest[A](implicit request: R[A]): Any
-    
-      def rejectResponse[A](implicit request: R[A]): Future[Result]
-    
-      def bypass[A](implicit request: R[A]): Boolean = false
-      
-      // ...
-    }
+/**
+ * ActionFunction which holds a RateLimiter with a bucket for each key returned by method keyFromRequest.
+ * Tokens are consumed only by failures determined by function resultCheck. If no tokens remain, requests with this key are rejected.
+ * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
+ *
+ * @param rateLimiter
+ * @param resultCheck
+ * @param executionContext
+ * @tparam R
+ */
+abstract class FailureRateLimitFunction[R[_] <: Request[_]](
+     rateLimiter: RateLimiter,
+     resultCheck: Result => Boolean,
+)(implicit val executionContext: ExecutionContext)
+  extends ActionFunction[R, R] {
+
+  def keyFromRequest[A](implicit request: R[A]): Any
+
+  def rejectResponse[A](implicit request: R[A]): Future[Result]
+
+  def bypass[A](implicit request: R[A]): Boolean = false
+  
+  // ...
+}
 ```
 
 The convenience action HttpErrorRateLimitAction __limits the HTTP error rate for each IP address__. This is for example useful if you want to prevent brute force bot attacks on authentication requests.
@@ -178,17 +178,17 @@ The convenience action HttpErrorRateLimitAction __limits the HTTP error rate for
 From the sample app:
 
 ```scala
-  // allow 2 failures immediately and get a new token every 10 seconds
-  private val httpErrorRateLimitFunction: HttpErrorRateLimitFunction[Request] =
-    new HttpErrorRateLimitFunction[Request](new RateLimiter(2, 1f / 10, "test failure rate limit")) {
-      override def rejectResponse[A](implicit request: Request[A]): Future[Result] = Future.successful(BadRequest("failure rate exceeded"))
-    }
+// allow 2 failures immediately and get a new token every 10 seconds
+private val httpErrorRateLimitFunction: HttpErrorRateLimitFunction[Request] =
+new HttpErrorRateLimitFunction[Request](new RateLimiter(2, 1f / 10, "test failure rate limit")) {
+  override def rejectResponse[A](implicit request: Request[A]): Future[Result] = Future.successful(BadRequest("failure rate exceeded"))
+}
 
-  def failureLimitedByIp(fail: Boolean): Action[AnyContent] =
-    (Action andThen httpErrorRateLimitFunction) {
-      if (fail) BadRequest("failed")
-      else Ok("Ok")
-    }
+def failureLimitedByIp(fail: Boolean): Action[AnyContent] =
+(Action andThen httpErrorRateLimitFunction) {
+  if (fail) BadRequest("failed")
+  else Ok("Ok")
+}
 ```
 
 1.3 Integration with Silhouette
