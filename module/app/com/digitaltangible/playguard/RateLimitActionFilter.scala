@@ -101,15 +101,12 @@ abstract class HttpErrorRateLimitFunction[R[_] <: Request[_]](
 }
 
 /**
- * ActionFunction which holds a RateLimiter with a bucket for each key returned by function keyFromRequest.
+ * ActionFunction which holds a RateLimiter with a bucket for each key returned by method keyFromRequest.
  * Tokens are consumed only by failures determined by function resultCheck. If no tokens remain, requests with this key are rejected.
  * Can be used with any Request type. Useful if you want to use content from a wrapped request, e.g. User ID
  *
  * @param rateLimiter
- * @param keyFromRequest
  * @param resultCheck
- * @param rejectResponse
- * @param bypass
  * @param executionContext
  * @tparam R
  */
