@@ -1,7 +1,6 @@
 package com.digitaltangible.ratelimit
 
 import com.digitaltangible.FakeClock
-import com.digitaltangible.tokenbucket.Clock
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
