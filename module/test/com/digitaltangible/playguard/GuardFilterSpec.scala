@@ -1,10 +1,10 @@
 package com.digitaltangible.playguard
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
 import com.digitaltangible.FakeClock
 import com.digitaltangible.tokenbucket.{Clock, CurrentTimeClock, TokenBucketGroup}
 import com.typesafe.config.ConfigFactory
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api._
@@ -42,7 +42,7 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
 
     "block unlisted IP after limit exeeded" in {
       val fakeClock = new FakeClock
-      val filter = testFilter(fakeClock)
+      val filter    = testFilter(fakeClock)
       runFake("0.0.0.0", filter) mustEqual OK
       runFake("0.0.0.0", filter) mustEqual OK
       runFake("0.0.0.0", filter) mustEqual TOO_MANY_REQUESTS
@@ -54,7 +54,7 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
 
     "not limit whitelisted IPs" in {
       val fakeClock = new FakeClock
-      val filter = testFilter(fakeClock)
+      val filter    = testFilter(fakeClock)
       runFake("2.2.2.2", filter) mustEqual OK
       runFake("2.2.2.2", filter) mustEqual OK
       runFake("2.2.2.2", filter) mustEqual OK
@@ -62,7 +62,7 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
 
     "block after global limit exeeded" in {
       val fakeClock = new FakeClock
-      val filter = testFilter(fakeClock)
+      val filter    = testFilter(fakeClock)
       runFake("0.0.0.0", filter) mustEqual OK
       runFake("0.0.0.2", filter) mustEqual OK
       runFake("0.0.0.3", filter) mustEqual OK
@@ -75,7 +75,7 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
 
     "bypass global limit for whitelisted IPs" in {
       val fakeClock = new FakeClock
-      val filter = testFilter(fakeClock)
+      val filter    = testFilter(fakeClock)
       runFake("0.0.0.0", filter) mustEqual OK
       runFake("0.0.0.2", filter) mustEqual OK
       runFake("0.0.0.3", filter) mustEqual OK
@@ -85,18 +85,18 @@ class GuardFilterSpec extends PlaySpec with GuiceOneAppPerSuite {
 
     "ignore spoofed X-Forwarded-For header by default" in {
       val fakeClock = new FakeClock
-      val filter = testFilter(fakeClock)
+      val filter    = testFilter(fakeClock)
       runFake("0.0.0.0", filter, FakeHeaders(List("X-Forwarded-For" -> "3.3.3.3"))) mustEqual OK
       runFake("3.3.3.3", filter, FakeHeaders(List("X-Forwarded-For" -> "0.0.0.0"))) mustEqual FORBIDDEN
     }
   }
 
   private def runFake(ip: String, filter: GuardFilter, headers: FakeHeaders = FakeHeaders()): Int = {
-    val bodyParsers = app.injector.instanceOf[PlayBodyParsers]
+    val bodyParsers                         = app.injector.instanceOf[PlayBodyParsers]
     val actionBuilder: DefaultActionBuilder = DefaultActionBuilder(bodyParsers.anyContent)
-    val rh = FakeRequest("GET", "/", headers, AnyContentAsEmpty, ip)
-    val action = actionBuilder(Ok("success"))
-    val result = filter(action)(rh).run()
+    val rh                                  = FakeRequest("GET", "/", headers, AnyContentAsEmpty, ip)
+    val action                              = actionBuilder(Ok("success"))
+    val result                              = filter(action)(rh).run()
     status(result)
   }
 

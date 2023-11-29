@@ -1,8 +1,8 @@
 package com.digitaltangible.playguard
 
-import akka.stream.Materializer
 import com.digitaltangible.FakeClock
 import com.digitaltangible.ratelimit.RateLimiter
+import org.apache.pekko.stream.Materializer
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.mvc.Results._
