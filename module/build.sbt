@@ -2,7 +2,7 @@ name := """play-guard"""
 
 organization := """com.digitaltangible"""
 
-version := "3.0.0-SNAPSHOT"
+version := "3.0.0"
 
 scalaVersion := "2.13.12"
 
