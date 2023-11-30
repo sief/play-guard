@@ -17,7 +17,7 @@ Play2 module for blocking and throttling abusive requests.
 
 ## Target
 
-This module targets the __Scala__ version of __Play 2.x.x__
+This module targets the __Scala__ version of __Play 2.x.x__ and __3.x.x__
 
 ## Rate Limit Algorithm
 
@@ -25,6 +25,11 @@ Based on the token bucket algorithm: http://en.wikipedia.org/wiki/Token_bucket
 
 
 ## Getting play-guard
+
+For Play 3.0.x:
+```scala
+  "com.digitaltangible" %% "play-guard" % "3.0.0"
+```
 
 For Play 2.9.x:
 ```scala
