@@ -1,4 +1,4 @@
-# Play2 Guard Module
+# Play Framework Guard Module
 
 [![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.10.svg?label=latest%20release%20for%202.10)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.10)
 [![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.11.svg?label=latest%20release%20for%202.11)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.11)
@@ -7,7 +7,7 @@
 [![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_3.svg?label=latest%20release%20for%203)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_3)
 
 
-Play2 module for blocking and throttling abusive requests.
+Play module for blocking and throttling abusive requests.
 
 - throttling specific Actions based on request attributes (e.g. IP address)
 - throttling specific Actions based on request attributes (e.g. IP address) and failure rate (e.g. HTTP status or any other Result attribute)
