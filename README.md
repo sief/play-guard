@@ -1,10 +1,10 @@
 # Play Framework Guard Module
 
-[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.10.svg?label=latest%20release%20for%202.10)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.10)
-[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.11.svg?label=latest%20release%20for%202.11)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.11)
-[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.12.svg?label=latest%20release%20for%202.12)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.12)
-[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.13.svg?label=latest%20release%20for%202.13)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.13)
-[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_3.svg?label=latest%20release%20for%203)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_3)
+[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.10.svg?label=latest%20release%20for%20Scala%202.10)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.10)
+[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.11.svg?label=latest%20release%20for%20Scala%202.11)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.11)
+[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.12.svg?label=latest%20release%20for%20Scala%202.12)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.12)
+[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_2.13.svg?label=latest%20release%20for%20Scala%202.13)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_2.13)
+[![Maven](https://img.shields.io/maven-central/v/com.digitaltangible/play-guard_3.svg?label=latest%20release%20for%20Scala%203)](http://mvnrepository.com/artifact/com.digitaltangible/play-guard_3)
 
 
 Play module for blocking and throttling abusive requests.
